@@ -1,6 +1,23 @@
-# Bazooka Project
+# BAZOOKA PC MONITORING SYSTEM
 
-A Node.js web service built with Express.js, ready for deployment on Render.
+A Node.js backend system for monitoring multiple PCs with real-time status tracking, error reporting, and heartbeat management.
+
+## Features
+
+- **PC Registration**: Register PCs with unique API keys
+- **Heartbeat Monitoring**: Track PC status with periodic heartbeats
+- **Error Reporting**: Collect and view errors from monitored PCs
+- **Real-time Status**: Monitor online/offline status of all PCs
+
+## API Endpoints
+
+### Core Endpoints
+- `GET /` - System information and available endpoints
+- `POST /register-pc` - Register a new PC
+- `POST /heartbeat` - Send heartbeat from a PC
+- `POST /report-error` - Report an error from a PC
+- `GET /errors` - Get recent errors
+- `GET /pcs` - Get all registered PCs
 
 ## Quick Start
 
@@ -9,60 +26,55 @@ A Node.js web service built with Express.js, ready for deployment on Render.
    npm install
    ```
 
-2. Copy environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Start the server:
+2. Start the server:
    ```bash
    npm start
    ```
 
-4. For development with auto-reload:
+3. For development with auto-reload:
    ```bash
    npm run dev
    ```
 
-## Render Deployment Settings
+## API Usage Examples
 
-**Name**: `bazooka-project` (or your preferred name)
+### Register a PC
+```bash
+curl -X POST http://localhost:3000/register-pc \
+  -H "Content-Type: application/json" \
+  -d '{"pcName": "My-Computer"}'
+```
 
-**Language**: `Node`
+### Send Heartbeat
+```bash
+curl -X POST http://localhost:3000/heartbeat \
+  -H "Content-Type: application/json" \
+  -d '{"apiKey": "your-api-key", "status": "ONLINE"}'
+```
+
+### Report Error
+```bash
+curl -X POST http://localhost:3000/report-error \
+  -H "Content-Type: application/json" \
+  -d '{"apiKey": "your-api-key", "errorType": "CRASH", "message": "Application crashed"}'
+```
+
+## Project Status
+
+✅ **Phase 1**: Project Foundation - Complete
+✅ **Phase 2**: PC Registration & API Keys - Complete  
+✅ **Phase 3**: Heartbeat & Status Tracking - Complete
+✅ **Phase 4**: Error Reporting - Complete
+🔄 **Phase 5**: Web Dashboard - Pending
+🔄 **Phase 6**: Application Monitoring - Pending
+🔄 **Phase 7**: Advanced Features - Pending
+
+## Render Deployment
 
 **Build Command**: `npm install`
-
 **Start Command**: `npm start`
-
-**Instance Type**: 
-- **Free**: Good for testing/hobby
-- **Standard ($7/month)**: Recommended for production
-
 **Environment Variables**:
 ```
 NODE_ENV=production
 PORT=10000
-```
-
-**Root Directory**: Leave empty (uses repo root)
-
-**Branch**: `main` (or your default branch)
-
-**Region**: Oregon (US West) - matches your existing services
-
-## API Endpoints
-
-- `GET /` - Welcome message
-- `GET /health` - Health check endpoint
-- `GET /api` - API information
-
-## Project Structure
-
-```
-bazooka-project/
-├── index.js          # Main server file
-├── package.json      # Dependencies and scripts
-├── .env.example      # Environment variables template
-├── .gitignore        # Git ignore file
-└── README.md         # This file
 ```
