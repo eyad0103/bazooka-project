@@ -69,9 +69,6 @@ class BazookaMonitor {
       case 'errors':
         this.refreshErrors();
         break;
-      case 'apps':
-        this.loadApps();
-        break;
       case 'settings':
         this.loadSettings();
         break;
@@ -245,33 +242,6 @@ class BazookaMonitor {
     document.getElementById('error-count').textContent = recentErrors;
   }
 
-  // Load Apps Content
-  loadApps() {
-    // Simulate loading apps data
-    const appsContainer = document.querySelector('.apps-grid');
-    if (appsContainer) {
-      // Add loading animation
-      appsContainer.classList.add('loading');
-      
-      setTimeout(() => {
-        appsContainer.classList.remove('loading');
-        // Apps are already in HTML, just add some dynamic behavior
-        this.addAppInteractivity();
-      }, 1000);
-    }
-  }
-
-  addAppInteractivity() {
-    const appCards = document.querySelectorAll('.app-card');
-    appCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const appName = card.querySelector('.app-name').textContent;
-        const status = card.querySelector('.app-status').textContent;
-        this.showResult(`App "${appName}" is ${status}`, 'success');
-      });
-    });
-  }
-
   // Load Settings Content
   loadSettings() {
     const saveBtn = document.querySelector('.save-btn');
@@ -294,19 +264,30 @@ class BazookaMonitor {
     const theme = document.getElementById('theme').value;
     const animations = document.getElementById('animations').checked;
 
-    // Save settings (in real app, this would be saved to backend/localStorage)
+    // Validate refresh rate
+    if (refreshRate < 1 || refreshRate > 60) {
+      this.showResult('Refresh rate must be between 1 and 60 seconds', 'error');
+      return;
+    }
+
+    // Save settings to localStorage
     const settings = {
-      refreshRate,
+      refreshRate: parseInt(refreshRate),
       alertThreshold,
       theme,
-      animations
+      animations,
+      savedAt: new Date().toISOString()
     };
 
     localStorage.setItem('bazooka-settings', JSON.stringify(settings));
+    
+    // Apply settings immediately
+    this.applySettings(settings);
+    
     this.showResult('Settings saved successfully!', 'success');
 
-    // Apply settings
-    this.applySettings(settings);
+    // Send settings to backend if needed
+    this.syncSettingsWithBackend(settings);
   }
 
   resetSettings() {
@@ -316,18 +297,102 @@ class BazookaMonitor {
     document.getElementById('theme').value = 'futuristic';
     document.getElementById('animations').checked = true;
 
+    // Clear localStorage
     localStorage.removeItem('bazooka-settings');
+    
+    // Apply default settings
+    const defaultSettings = {
+      refreshRate: 5,
+      alertThreshold: 'medium',
+      theme: 'futuristic',
+      animations: true
+    };
+    
+    this.applySettings(defaultSettings);
     this.showResult('Settings reset to default!', 'success');
   }
 
   applySettings(settings) {
+    // Apply refresh rate
     if (settings.refreshRate) {
       this.refreshInterval = settings.refreshRate * 1000;
       this.restartAutoRefresh();
+      console.log(`Refresh rate set to ${settings.refreshRate} seconds`);
     }
 
+    // Apply theme
+    if (settings.theme) {
+      this.applyTheme(settings.theme);
+    }
+
+    // Apply animations
     if (settings.animations !== undefined) {
-      document.body.style.setProperty('--animations-enabled', settings.animations ? '1' : '0');
+      this.toggleAnimations(settings.animations);
+    }
+
+    // Apply alert threshold
+    if (settings.alertThreshold) {
+      this.setAlertThreshold(settings.alertThreshold);
+    }
+  }
+
+  applyTheme(theme) {
+    const body = document.body;
+    body.className = body.className.replace(/theme-\w+/g, '');
+    body.classList.add(`theme-${theme}`);
+    
+    // You can define different theme CSS classes
+    switch(theme) {
+      case 'classic':
+        // Apply classic theme overrides
+        break;
+      case 'dark':
+        // Apply dark theme overrides
+        break;
+      case 'futuristic':
+      default:
+        // Default futuristic theme
+        break;
+    }
+  }
+
+  toggleAnimations(enabled) {
+    const style = document.createElement('style');
+    style.id = 'animation-toggle';
+    
+    if (!enabled) {
+      style.textContent = '* { animation: none !important; transition: none !important; }';
+      document.head.appendChild(style);
+    } else {
+      const existingStyle = document.getElementById('animation-toggle');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    }
+  }
+
+  setAlertThreshold(threshold) {
+    // Store alert threshold for error filtering
+    this.alertThreshold = threshold;
+    console.log(`Alert threshold set to ${threshold}`);
+  }
+
+  async syncSettingsWithBackend(settings) {
+    try {
+      // Optional: Sync settings with backend
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to sync settings with backend');
+      }
+    } catch (error) {
+      console.warn('Backend sync not available:', error.message);
     }
   }
 
@@ -380,7 +445,6 @@ class BazookaMonitor {
         // Apply settings to form
         if (settings.refreshRate) {
           document.getElementById('refresh-rate').value = settings.refreshRate;
-          this.refreshInterval = settings.refreshRate * 1000;
         }
         
         if (settings.alertThreshold) {
@@ -395,9 +459,14 @@ class BazookaMonitor {
           document.getElementById('animations').checked = settings.animations;
         }
         
+        // Apply the settings
         this.applySettings(settings);
+        
+        console.log('Settings loaded from localStorage:', settings);
       } catch (error) {
         console.error('Failed to load saved settings:', error);
+        // Clear corrupted settings
+        localStorage.removeItem('bazooka-settings');
       }
     }
   }
@@ -443,11 +512,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard navigation for tabs
   document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key >= '1' && e.key <= '4') {
+    if (e.altKey && e.key >= '1' && e.key <= '3') {
       const tabIndex = parseInt(e.key) - 1;
       const tabButtons = document.querySelectorAll('.tab-btn');
       if (tabButtons[tabIndex]) {
         tabButtons[tabIndex].click();
+      }
+    }
+  });
+
+  // Add settings keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      if (monitor.currentTab === 'settings') {
+        monitor.saveSettings();
+      }
+    }
+    
+    if (e.ctrlKey && e.key === 'r') {
+      e.preventDefault();
+      if (monitor.currentTab === 'settings') {
+        monitor.resetSettings();
       }
     }
   });

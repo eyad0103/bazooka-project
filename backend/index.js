@@ -33,7 +33,9 @@ app.get('/api', (req, res) => {
       'POST /heartbeat',
       'POST /report-error',
       'GET /errors',
-      'GET /pcs'
+      'GET /pcs',
+      'GET /api/settings',
+      'POST /api/settings'
     ]
   });
 });
@@ -131,6 +133,30 @@ app.get('/pcs', (req, res) => {
   res.json({
     pcs: pcList,
     total: pcList.length
+  });
+});
+
+// Settings endpoint
+app.post('/api/settings', (req, res) => {
+  const settings = req.body;
+  
+  // In a real application, you might store settings in a database
+  // For now, just acknowledge receipt
+  console.log('Settings received:', settings);
+  
+  res.json({
+    message: 'Settings saved successfully',
+    received: settings
+  });
+});
+
+app.get('/api/settings', (req, res) => {
+  // Return default settings for now
+  res.json({
+    refreshRate: 5,
+    alertThreshold: 'medium',
+    theme: 'futuristic',
+    animations: true
   });
 });
 
