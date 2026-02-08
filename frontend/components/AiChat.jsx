@@ -1,7 +1,8 @@
 // AI Chat Component - Uses only backend truth
 
-const aiApi = require('../api/aiApi');
-const aiStatusStore = require('../state/aiStatusStore');
+// Use global instances
+const aiApi = window.aiApi;
+const aiStatusStore = window.aiStatusStore;
 
 class AiChatComponent {
   constructor() {
@@ -194,4 +195,5 @@ class AiChatComponent {
   }
 }
 
-module.exports = AiChatComponent;
+// Make available globally
+window.AiChatComponent = AiChatComponent;

@@ -269,8 +269,7 @@ class ErrorsController {
       showLoading();
       
       // Use new AI API
-      const aiApi = require('../api/aiApi');
-      const response = await aiApi.explainError(this.currentError.errorId);
+      const response = await window.aiApi.explainError(this.currentError.errorId);
       
       if (response.success) {
         this.showAIExplanation(response.explanation);

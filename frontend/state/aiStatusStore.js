@@ -96,4 +96,5 @@ class AIStatusStore {
   }
 }
 
-module.exports = new AIStatusStore();
+// Make available globally
+window.aiStatusStore = new AIStatusStore();

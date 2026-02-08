@@ -1,7 +1,8 @@
 // API Key Settings Component - Uses only backend truth
 
-const settingsApi = require('../api/settingsApi');
-const aiStatusStore = require('../state/aiStatusStore');
+// Use global instances
+const settingsApi = window.settingsApi;
+const aiStatusStore = window.aiStatusStore;
 
 class ApiKeySettingsComponent {
   constructor() {
@@ -219,4 +220,5 @@ class ApiKeySettingsComponent {
   }
 }
 
-module.exports = ApiKeySettingsComponent;
+// Make available globally
+window.ApiKeySettingsComponent = ApiKeySettingsComponent;

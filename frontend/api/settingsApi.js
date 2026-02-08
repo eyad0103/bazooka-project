@@ -49,4 +49,5 @@ class SettingsApiClient {
   }
 }
 
-module.exports = new SettingsApiClient();
+// Make available globally
+window.settingsApi = new SettingsApiClient();

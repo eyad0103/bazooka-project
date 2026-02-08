@@ -49,4 +49,5 @@ class AIApiClient {
   }
 }
 
-module.exports = new AIApiClient();
+// Make available globally
+window.aiApi = new AIApiClient();
