@@ -85,7 +85,7 @@ class AIChatController {
         this.addMessage('system', 'AI features require an API key. Please configure your OpenRouter API key in the API Key tab.');
         document.querySelector('[data-tab="api-key"]').click();
       } else {
-        this.addMessage('system', 'Sorry, I encountered an error. Please try again.');
+        this.addMessage('system', `Error: ${response.error || 'Failed to get AI response'}. Please try again.`);
       }
     } catch (error) {
       console.error('AI chat error:', error);
