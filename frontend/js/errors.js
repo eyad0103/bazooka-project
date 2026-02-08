@@ -26,6 +26,11 @@ class ErrorsController {
     document.getElementById('error-filter-severity').addEventListener('change', () => {
       this.filterErrors();
     });
+
+    // Add close modal event listener
+    document.getElementById('close-error-modal').addEventListener('click', () => {
+      this.closeErrorModal();
+    });
   }
 
   async loadErrors() {

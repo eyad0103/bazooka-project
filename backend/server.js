@@ -23,7 +23,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-hashes' 'sha256-VBUXQafYcXl3Nz8m7mCSqeYaCJlfBARp3Ps3fc/oOf4='"],
+      scriptSrcAttr: ["'unsafe-hashes' 'sha256-VBUXQafYcXl3Nz8m7mCSqeYaCJlfBARp3Ps3fc/oOf4='"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https://openrouter.ai"]
     },
