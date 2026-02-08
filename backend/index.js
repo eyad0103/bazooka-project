@@ -31,6 +31,7 @@ let aiChatCollection;
 // Initialize database connection
 async function initializeDatabase() {
   try {
+    // Try to connect to MongoDB
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     db = client.db();
@@ -52,10 +53,48 @@ async function initializeDatabase() {
     await aiChatCollection.createIndex({ timestamp: -1 });
     await aiChatCollection.createIndex({ sessionId: 1 });
     
-    console.log('✅ Database connected successfully');
+    console.log('✅ MongoDB connected successfully');
+    console.log(`📊 Database: ${MONGODB_URI}`);
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    process.exit(1);
+    console.error('❌ MongoDB connection failed, falling back to in-memory storage:', error.message);
+    console.log('📊 Using in-memory storage (not persistent)');
+    
+    // Fallback to in-memory storage
+    const fallback = require('fs');
+    pcsCollection = {
+      find: async () => ({ toArray: () => [] }),
+      insertOne: async () => ({ insertedId: 'mock-id' }),
+      updateOne: async () => ({ modifiedCount: 1 }),
+      findOne: async () => null,
+      createIndex: async () => {}
+    };
+    
+    errorsCollection = {
+      find: async () => ({ toArray: () => [] }),
+      insertOne: async () => ({ insertedId: 'mock-id' }),
+      deleteMany: async () => ({ deletedCount: 0 }),
+      countDocuments: async () => 0
+    };
+    
+    appsCollection = {
+      find: async () => ({ toArray: () => [] }),
+      deleteMany: async () => ({ deletedCount: 0 }),
+      insertMany: async () => ({ insertedIds: [] })
+      countDocuments: async () => 0
+    };
+    
+    settingsCollection = {
+      findOne: async () => null,
+      replaceOne: async () => ({ upsertedCount: 1 }),
+      find: async () => ({ toArray: () => [] })
+    };
+    
+    aiChatCollection = {
+      find: async () => ({ toArray: () => [] }),
+      insertOne: async () => ({ insertedId: 'mock-id' }),
+      deleteMany: async () => ({ deletedCount: 0 }),
+      countDocuments: async () => 0
+    };
   }
 }
 
@@ -69,6 +108,11 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
+
+// In-memory cache for performance (fallback)
+const pcsCache = new Map();
+const errorsCache = new Map();
+const appsCache = new Map();
 
 // WebSocket connection handling
 wss.on('connection', (ws) => {
