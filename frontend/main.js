@@ -3,14 +3,20 @@
 class BazookaMonitor {
   constructor() {
     this.baseURL = window.location.origin;
-    this.refreshInterval = 5000; // 5 seconds
     this.currentTab = 'dashboard';
+    this.refreshInterval = 5000; // 5 seconds
+    this.demoMode = true; // Enable demo mode
+    this.demoData = this.generateDemoData();
     this.init();
   }
 
   async init() {
     this.setupTabNavigation();
-    await this.loadDashboard();
+    if (this.demoMode) {
+      this.loadDemoDashboard();
+    } else {
+      await this.loadDashboard();
+    }
     this.startAutoRefresh();
     this.updateLastUpdateTime();
   }
@@ -21,7 +27,7 @@ class BazookaMonitor {
     const tabContents = document.querySelectorAll('.tab-content');
     const tabSlider = document.querySelector('.tab-slider');
 
-    tabButtons.forEach((button, index) => {
+    tabButtons.forEach(button => {
       button.addEventListener('click', () => {
         const targetTab = button.getAttribute('data-tab');
         this.switchTab(targetTab, button, tabSlider);
@@ -29,42 +35,45 @@ class BazookaMonitor {
     });
 
     // Initialize slider position
-    this.updateSliderPosition(document.querySelector('.tab-btn.active'), tabSlider);
+    const activeButton = document.querySelector('.tab-btn.active');
+    if (activeButton && tabSlider) {
+      this.updateSliderPosition(activeButton, tabSlider);
+    }
   }
 
-  switchTab(tabName, activeButton, slider) {
-    // Update button states
+  switchTab(tabName, button, slider) {
+    // Update active states
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    activeButton.classList.add('active');
-
-    // Update content visibility
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    button.classList.add('active');
     document.getElementById(`${tabName}-tab`).classList.add('active');
-
-    // Update slider position
-    this.updateSliderPosition(activeButton, slider);
-
-    // Update current tab
+    
+    // Update slider
+    if (slider) {
+      this.updateSliderPosition(button, slider);
+    }
+    
     this.currentTab = tabName;
-
-    // Load tab-specific content
     this.loadTabContent(tabName);
   }
 
   updateSliderPosition(activeButton, slider) {
-    if (slider && activeButton) {
-      const buttonRect = activeButton.getBoundingClientRect();
-      const navRect = activeButton.parentElement.getBoundingClientRect();
-      
-      slider.style.width = `${buttonRect.width}px`;
-      slider.style.left = `${buttonRect.left - navRect.left}px`;
-    }
+    const buttonRect = activeButton.getBoundingClientRect();
+    const navRect = activeButton.parentElement.getBoundingClientRect();
+    
+    slider.style.width = `${buttonRect.width}px`;
+    slider.style.left = `${buttonRect.left - navRect.left}px`;
   }
 
   loadTabContent(tabName) {
     switch(tabName) {
       case 'dashboard':
-        this.loadDashboard();
+        if (this.demoMode) {
+          this.loadDemoDashboard();
+        } else {
+          this.loadDashboard();
+        }
         break;
       case 'errors':
         this.refreshErrors();
@@ -78,8 +87,151 @@ class BazookaMonitor {
     }
   }
 
+  // Generate demo data
+  generateDemoData() {
+    return {
+      pcs: [
+        {
+          id: 'pc-1',
+          name: 'GAMING-RIG',
+          status: 'ONLINE',
+          cpu: 45,
+          memory: 62,
+          lastHeartbeat: new Date().toISOString(),
+          registrationDate: '2024-01-15T10:00:00Z'
+        },
+        {
+          id: 'pc-2', 
+          name: 'WORKSTATION-01',
+          status: 'ONLINE',
+          cpu: 78,
+          memory: 85,
+          lastHeartbeat: new Date().toISOString(),
+          registrationDate: '2024-01-16T14:30:00Z'
+        },
+        {
+          id: 'pc-3',
+          name: 'SERVER-NODE',
+          status: 'WAITING',
+          cpu: 12,
+          memory: 34,
+          lastHeartbeat: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+          registrationDate: '2024-01-14T09:15:00Z'
+        },
+        {
+          id: 'pc-4',
+          name: 'DEV-MACHINE',
+          status: 'OFFLINE',
+          cpu: 0,
+          memory: 0,
+          lastHeartbeat: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+          registrationDate: '2024-01-13T16:45:00Z'
+        }
+      ],
+      errors: [
+        {
+          id: 'error-1',
+          pcId: 'pc-2',
+          pcName: 'WORKSTATION-01',
+          type: 'WARNING',
+          message: 'High CPU usage detected (85%)',
+          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'error-2',
+          pcId: 'pc-3',
+          pcName: 'SERVER-NODE',
+          type: 'INFO',
+          message: 'Service restarted successfully',
+          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'error-3',
+          pcId: 'pc-4',
+          pcName: 'DEV-MACHINE',
+          type: 'CRITICAL',
+          message: 'Connection timeout after 30 seconds',
+          timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString()
+        }
+      ],
+      apps: [
+        {
+          id: 'app-1',
+          pcId: 'pc-1',
+          pcName: 'GAMING-RIG',
+          name: 'Steam',
+          status: 'RUNNING',
+          version: '2.4.0',
+          memoryUsage: '2.1 GB',
+          cpuUsage: '15%',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'app-2',
+          pcId: 'pc-1',
+          pcName: 'GAMING-RIG',
+          name: 'Discord',
+          status: 'RUNNING',
+          version: '1.0.9',
+          memoryUsage: '512 MB',
+          cpuUsage: '3%',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'app-3',
+          pcId: 'pc-2',
+          pcName: 'WORKSTATION-01',
+          name: 'Visual Studio Code',
+          status: 'RUNNING',
+          version: '1.85.0',
+          memoryUsage: '1.8 GB',
+          cpuUsage: '12%',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'app-4',
+          pcId: 'pc-2',
+          pcName: 'WORKSTATION-01',
+          name: 'Chrome',
+          status: 'NOT_RESPONDING',
+          version: '120.0.6099',
+          memoryUsage: '3.2 GB',
+          cpuUsage: '25%',
+          lastUpdated: new Date(Date.now() - 2 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'app-5',
+          pcId: 'pc-3',
+          pcName: 'SERVER-NODE',
+          name: 'Docker Desktop',
+          status: 'RUNNING',
+          version: '4.26.1',
+          memoryUsage: '1.2 GB',
+          cpuUsage: '8%',
+          lastUpdated: new Date().toISOString()
+        },
+        {
+          id: 'app-6',
+          pcId: 'pc-4',
+          pcName: 'DEV-MACHINE',
+          name: 'Node.js',
+          status: 'STOPPED',
+          version: '20.10.0',
+          memoryUsage: '0 MB',
+          cpuUsage: '0%',
+          lastUpdated: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+        }
+      ]
+    };
+  }
+
   // API Calls
   async apiCall(endpoint, method = 'GET', data = null) {
+    // In demo mode, return mock data
+    if (this.demoMode) {
+      return this.getMockData(endpoint);
+    }
+
     try {
       const options = {
         method,
@@ -92,7 +244,7 @@ class BazookaMonitor {
         options.body = JSON.stringify(data);
       }
 
-      const response = await fetch(`${this.baseURL}${endpoint}`, options);
+      const response = await fetch(endpoint, options);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -102,6 +254,20 @@ class BazookaMonitor {
     } catch (error) {
       console.error('API call failed:', error);
       throw error;
+    }
+  }
+
+  // Mock data provider for demo mode
+  getMockData(endpoint) {
+    switch(endpoint) {
+      case '/pcs':
+        return { pcs: this.demoData.pcs, total: this.demoData.pcs.length };
+      case '/errors':
+        return { errors: this.demoData.errors, total: this.demoData.errors.length };
+      case '/apps-status':
+        return { apps: this.demoData.apps, total: this.demoData.apps.length };
+      default:
+        return { message: 'Demo mode active' };
     }
   }
 
@@ -117,16 +283,30 @@ class BazookaMonitor {
     }
 
     try {
-      const result = await this.apiCall('/register-pc', 'POST', { pcName });
+      const response = await this.apiCall('/register-pc', 'POST', { pcName });
       
-      this.showResult(`PC "${pcName}" registered successfully! API Key: ${result.pc.apiKey}`, 'success');
+      // Add to demo data if in demo mode
+      if (this.demoMode) {
+        this.demoData.pcs.push({
+          id: response.apiKey.substring(0, 8),
+          name: pcName,
+          status: 'ONLINE',
+          cpu: Math.floor(Math.random() * 60),
+          memory: Math.floor(Math.random() * 60),
+          lastHeartbeat: new Date().toISOString(),
+          registrationDate: new Date().toISOString()
+        });
+        this.loadDemoDashboard();
+      }
+
+      this.showResult(`PC "${pcName}" registered successfully! API Key: ${response.apiKey}`, 'success');
       pcNameInput.value = '';
       
-      // Refresh dashboard after registration
-      setTimeout(() => this.loadDashboard(), 1000);
-      
+      if (!this.demoMode) {
+        await this.loadDashboard();
+      }
     } catch (error) {
-      this.showResult(`Registration failed: ${error.message}`, 'error');
+      this.showResult('Failed to register PC', 'error');
     }
   }
 
@@ -149,6 +329,13 @@ class BazookaMonitor {
     }, 5000);
   }
 
+  // Load demo dashboard
+  loadDemoDashboard() {
+    this.updateStats(this.demoData.pcs, this.demoData.errors);
+    this.updatePCDisplay(this.demoData.pcs);
+    this.updateLastUpdateTime();
+  }
+
   // Load Dashboard Data
   async loadDashboard() {
     try {
@@ -157,79 +344,123 @@ class BazookaMonitor {
         this.apiCall('/errors')
       ]);
 
-      this.updatePCsDisplay(pcsData.pcs);
-      this.updateErrorsDisplay(errorsData.errors);
       this.updateStats(pcsData.pcs, errorsData.errors);
+      this.updatePCDisplay(pcsData.pcs);
+      this.updateErrorsDisplay(errorsData.errors);
+      this.updateLastUpdateTime();
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      this.showResult('Failed to load dashboard data', 'error');
     }
   }
 
-  // Update PCs Display
-  updatePCsDisplay(pcs) {
+  updatePCDisplay(pcs) {
     const container = document.getElementById('pcs-container');
     
     if (pcs.length === 0) {
-      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No PCs registered yet. Register your first PC above!</p>';
+      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No PCs registered yet.</p>';
       return;
     }
 
-    container.innerHTML = pcs.map(pc => this.createPCCard(pc)).join('');
+    container.innerHTML = pcs.map((pc, index) => this.createPCCard(pc, index)).join('');
+    
+    // Animate cards appearing
+    const cards = container.querySelectorAll('.pc-card');
+    cards.forEach((card, i) => {
+      setTimeout(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0) scale(1)';
+      }, i * 100);
+    });
   }
 
-  createPCCard(pc) {
-    const statusClass = pc.status.toLowerCase();
+  createPCCard(pc, index) {
+    const statusClass = pc.status.toLowerCase().replace('_', '');
     const lastHeartbeat = new Date(pc.lastHeartbeat).toLocaleString();
+    const registrationDate = new Date(pc.registrationDate).toLocaleDateString();
+    
+    // Determine metric colors
+    const cpuClass = pc.cpu > 80 ? 'high' : pc.cpu > 50 ? 'medium' : 'low';
+    const memoryClass = pc.memory > 80 ? 'high' : pc.memory > 50 ? 'medium' : 'low';
+    const heartbeatClass = this.getHeartbeatClass(pc.lastHeartbeat);
     
     return `
-      <div class="pc-card ${statusClass}">
-        <div class="pc-name">${pc.name}</div>
-        <div class="pc-status">
-          <div class="status-dot ${statusClass}"></div>
-          <span>${pc.status}</span>
+      <div class="pc-card ${statusClass}" style="opacity: 0; transform: translateY(30px) scale(0.9); transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+        <div class="pc-header">
+          <div class="pc-name">${pc.name}</div>
+          <div class="pc-status ${statusClass}">${pc.status.replace('_', ' ')}</div>
         </div>
         <div class="pc-info">
-          <div>🆔 ID: ${pc.id}</div>
-          <div>💓 Last: ${lastHeartbeat}</div>
-          <div>📅 Registered: ${new Date(pc.registrationDate).toLocaleDateString()}</div>
+          <div class="info-item">
+            <span class="info-label">ID:</span>
+            <span class="info-value">${pc.id}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Registered:</span>
+            <span class="info-value">${registrationDate}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Last Heartbeat:</span>
+            <span class="info-value">${lastHeartbeat}</span>
+          </div>
+        </div>
+        <div class="pc-metrics">
+          <div class="metric">
+            <div class="metric-value">${pc.cpu || 0}%</div>
+            <div class="metric-label">CPU</div>
+            <div class="metric-bar">
+              <div class="metric-bar-fill ${cpuClass}" style="width: ${pc.cpu || 0}%"></div>
+            </div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">${pc.memory || 0}%</div>
+            <div class="metric-label">Memory</div>
+            <div class="metric-bar">
+              <div class="metric-bar-fill ${memoryClass}" style="width: ${pc.memory || 0}%"></div>
+            </div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">${this.getHeartbeatText(pc.lastHeartbeat)}</div>
+            <div class="metric-label">Heartbeat</div>
+            <div class="metric-bar">
+              <div class="metric-bar-fill ${heartbeatClass}" style="width: ${this.getHeartbeatWidth(pc.lastHeartbeat)}%"></div>
+            </div>
+          </div>
         </div>
       </div>
     `;
   }
 
-  // Update Errors Display
-  updateErrorsDisplay(errors) {
-    const container = document.getElementById('errors-container');
-    const filter = document.getElementById('error-filter').value;
+  getHeartbeatClass(lastHeartbeat) {
+    const now = new Date();
+    const last = new Date(lastHeartbeat);
+    const diffSeconds = (now - last) / 1000;
     
-    const filteredErrors = filter === 'all' 
-      ? errors 
-      : errors.filter(error => error.errorType === filter);
-
-    if (filteredErrors.length === 0) {
-      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No errors to display.</p>';
-      return;
-    }
-
-    container.innerHTML = filteredErrors.map(error => this.createErrorItem(error)).join('');
+    if (diffSeconds < 60) return 'high';
+    if (diffSeconds < 300) return 'medium';
+    return 'low';
   }
 
-  createErrorItem(error) {
-    const time = new Date(error.timestamp).toLocaleString();
+  getHeartbeatText(lastHeartbeat) {
+    const now = new Date();
+    const last = new Date(lastHeartbeat);
+    const diffSeconds = (now - last) / 1000;
     
-    return `
-      <div class="error-item">
-        <div class="error-header">
-          <span class="error-type">${error.errorType}</span>
-          <span class="error-pc">${error.pcName}</span>
-        </div>
-        <div class="error-message">${error.message}</div>
-        <div class="error-time">${time}</div>
-      </div>
-    `;
+    if (diffSeconds < 60) return 'Active';
+    if (diffSeconds < 300) return `${Math.floor(diffSeconds / 60)}m ago`;
+    return `${Math.floor(diffSeconds / 60)}m ago`;
   }
 
-  // Update Statistics
+  getHeartbeatWidth(lastHeartbeat) {
+    const now = new Date();
+    const last = new Date(lastHeartbeat);
+    const diffSeconds = (now - last) / 1000;
+    
+    if (diffSeconds < 60) return 100;
+    if (diffSeconds < 300) return 60;
+    return 20;
+  }
+
   updateStats(pcs, errors) {
     const onlinePCs = pcs.filter(pc => pc.status === 'ONLINE').length;
     const offlinePCs = pcs.filter(pc => pc.status === 'OFFLINE').length;
@@ -553,37 +784,78 @@ class BazookaMonitor {
     }
     this.startAutoRefresh();
   }
+
   // Auto Refresh
   startAutoRefresh() {
     this.refreshTimer = setInterval(() => {
-      this.loadDashboard();
-      this.updateLastUpdateTime();
+      if (this.demoMode) {
+        // Simulate data changes in demo mode
+        this.simulateDataChanges();
+        this.loadDemoDashboard();
+      } else {
+        this.loadDashboard();
+      }
     }, this.refreshInterval);
   }
 
-  updateLastUpdateTime() {
-    const now = new Date().toLocaleTimeString();
-    document.getElementById('last-update').textContent = `Last Update: ${now}`;
+  simulateDataChanges() {
+    // Randomly update PC metrics
+    this.demoData.pcs.forEach(pc => {
+      if (pc.status === 'ONLINE') {
+        pc.cpu = Math.max(10, Math.min(95, pc.cpu + Math.floor(Math.random() * 21) - 10));
+        pc.memory = Math.max(10, Math.min(95, pc.memory + Math.floor(Math.random() * 21) - 10));
+        pc.lastHeartbeat = new Date().toISOString();
+      }
+    });
   }
 
-  // Manual Refresh
+  updateLastUpdateTime() {
+    const lastUpdateElement = document.getElementById('last-update');
+    if (lastUpdateElement) {
+      lastUpdateElement.textContent = `Last Update: ${new Date().toLocaleTimeString()}`;
+    }
+  }
+
+  // Error handling
   async refreshErrors() {
     try {
       const errorsData = await this.apiCall('/errors');
       this.updateErrorsDisplay(errorsData.errors);
-      this.updateStats(
-        Array.from(document.querySelectorAll('.pc-card')).length ? 
-          await this.apiCall('/pcs').then(d => d.pcs) : [],
-        errorsData.errors
-      );
     } catch (error) {
       console.error('Failed to refresh errors:', error);
     }
   }
 
-  // Filter Errors
+  updateErrorsDisplay(errors) {
+    const container = document.getElementById('errors-container');
+    
+    if (errors.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No errors reported.</p>';
+      return;
+    }
+
+    container.innerHTML = errors.map(error => this.createErrorCard(error)).join('');
+  }
+
+  createErrorCard(error) {
+    const timestamp = new Date(error.timestamp).toLocaleString();
+    const typeClass = error.type.toLowerCase();
+    
+    return `
+      <div class="error-card ${typeClass}">
+        <div class="error-header">
+          <div class="error-type">${error.type}</div>
+          <div class="error-time">${timestamp}</div>
+        </div>
+        <div class="error-pc">PC: ${error.pcName}</div>
+        <div class="error-message">${error.message}</div>
+      </div>
+    `;
+  }
+
   filterErrors() {
-    this.loadDashboard();
+    // Implementation for error filtering
+    this.refreshErrors();
   }
 
   // Load saved settings on startup
