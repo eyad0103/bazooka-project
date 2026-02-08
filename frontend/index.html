@@ -1,197 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAZOOKA PC MONITORING SYSTEM</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bazooka PC Monitoring</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>🚀 BAZOOKA PC MONITORING SYSTEM</h1>
-            <div class="status-bar">
-                <span id="system-status" class="status-indicator online">SYSTEM ONLINE</span>
-                <span id="last-update">Last Update: --</span>
-            </div>
-        </header>
-
-        <!-- Tab Navigation -->
-        <nav class="tab-navigation">
-            <div class="tab-slider"></div>
-            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-            <button class="tab-btn" data-tab="errors">Errors</button>
-            <button class="tab-btn" data-tab="apps">Apps</button>
-            <button class="tab-btn" data-tab="ai-chat">AI Chat</button>
-            <button class="tab-btn" data-tab="settings">Settings</button>
-        </nav>
-
-        <!-- Tab Content -->
-        <main class="main-content">
-            <!-- Dashboard Tab -->
-            <div class="tab-content active" id="dashboard-tab">
-                <!-- Registration Section -->
-                <section class="registration-panel">
-                    <h2>Register New PC</h2>
-                    <div class="registration-form">
-                        <input type="text" id="pc-name" placeholder="Enter PC Name" maxlength="50">
-                        <button id="register-btn" onclick="registerPC()">Register PC</button>
-                    </div>
-                    <div id="registration-result" class="result-message"></div>
-                </section>
-
-                <!-- PCs Overview -->
-                <section class="pcs-overview">
-                    <h2>PC Status Overview</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number" id="total-pcs">0</div>
-                            <div class="stat-label">Total PCs</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number online" id="online-pcs">0</div>
-                            <div class="stat-label">Online</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number offline" id="offline-pcs">0</div>
-                            <div class="stat-label">Offline</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number warning" id="error-count">0</div>
-                            <div class="stat-label">Recent Errors</div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- PC Cards Grid -->
-                <section class="pcs-grid">
-                    <h2>PC Details</h2>
-                    <div id="pcs-container" class="pc-cards-grid">
-                        <!-- PC cards will be dynamically inserted here -->
-                    </div>
-                </section>
-            </div>
-
-            <!-- Errors Tab -->
-            <div class="tab-content" id="errors-tab">
-                <section class="errors-section">
-                    <h2>Recent Errors</h2>
-                    <div class="error-controls">
-                        <button onclick="refreshErrors()">Refresh Errors</button>
-                        <select id="error-filter" onchange="filterErrors()">
-                            <option value="all">All Errors</option>
-                            <option value="CRITICAL">Critical</option>
-                            <option value="WARNING">Warning</option>
-                            <option value="INFO">Info</option>
-                        </select>
-                    </div>
-                    <div id="errors-container" class="errors-list">
-                        <!-- Errors will be dynamically inserted here -->
-                    </div>
-                </section>
-            </div>
-
-            <!-- Apps Tab -->
-            <div class="tab-content" id="apps-tab">
-                <section class="apps-section">
-                    <h2>Applications Monitor</h2>
-                    <div class="apps-controls">
-                        <button onclick="refreshApps()">Refresh Apps</button>
-                        <select id="pc-filter" onchange="filterApps()">
-                            <option value="all">All PCs</option>
-                        </select>
-                    </div>
-                    <div id="apps-container" class="apps-grid">
-                        <!-- Apps will be dynamically inserted here -->
-                    </div>
-                </section>
-            </div>
-
-            <!-- AI Chat Tab -->
-            <div class="tab-content" id="ai-chat-tab">
-                <section class="ai-chat-section">
-                    <h2>AI Assistant</h2>
-                    <div class="ai-chat-container">
-                        <div class="chat-messages" id="chat-messages">
-                            <div class="welcome-message">
-                                <div class="ai-avatar">🤖</div>
-                                <div class="message-content">
-                                    <p>Hello! I'm your Bazooka PC Monitoring AI assistant. I can help you:</p>
-                                    <ul>
-                                        <li>Analyze system performance and metrics</li>
-                                        <li>Troubleshoot PC issues and errors</li>
-                                        <li>Provide optimization recommendations</li>
-                                        <li>Explain monitoring data and trends</li>
-                                    </ul>
-                                    <p>Feel free to ask me anything about your PC monitoring data!</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="chat-input-container">
-                            <div class="input-group">
-                                <input type="text" id="chat-input" placeholder="Ask me about your PC monitoring data..." maxlength="500">
-                                <button id="send-message" class="send-btn">
-                                    <span class="send-icon">➤</span>
-                                </button>
-                            </div>
-                            <div class="chat-controls">
-                                <button id="clear-chat" class="clear-btn">Clear Chat</button>
-                                <button id="export-chat" class="export-btn">Export</button>
-                                <div class="typing-indicator" id="typing-indicator">
-                                    <span class="typing-dots">...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Settings Tab -->
-            <div class="tab-content" id="settings-tab">
-                <section class="settings-section">
-                    <h2>System Settings</h2>
-                    <div class="settings-grid">
-                        <div class="setting-card">
-                            <h3>Monitoring Settings</h3>
-                            <div class="setting-item">
-                                <label for="refresh-rate">Refresh Rate (seconds)</label>
-                                <input type="number" id="refresh-rate" value="5" min="1" max="60">
-                            </div>
-                            <div class="setting-item">
-                                <label for="alert-threshold">Alert Threshold</label>
-                                <select id="alert-threshold">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="setting-card">
-                            <h3>Display Settings</h3>
-                            <div class="setting-item">
-                                <label for="theme">Theme</label>
-                                <select id="theme">
-                                    <option value="futuristic" selected>Futuristic</option>
-                                    <option value="classic">Classic</option>
-                                    <option value="dark">Dark</option>
-                                </select>
-                            </div>
-                            <div class="setting-item">
-                                <label for="animations">Animations</label>
-                                <input type="checkbox" id="animations" checked>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="settings-actions">
-                        <button class="save-btn">Save Settings</button>
-                        <button class="reset-btn">Reset to Default</button>
-                    </div>
-                </section>
-            </div>
-        </main>
+  <header>
+    <h1>🚀 Bazooka PC Monitoring</h1>
+    <div class="status-bar">
+      <span id="last-update">Last Update: --</span>
+      <span id="connection-status">🟢 Connected</span>
     </div>
-
-    <script src="main.js"></script>
+  </header>
+  
+  <nav>
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="errors">Errors</button>
+    <button data-tab="apps">Apps</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  
+  <main>
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+      <section class="registration-panel">
+        <h2>Register New PC</h2>
+        <div class="registration-form">
+          <input type="text" id="pc-name" placeholder="Enter PC name..." maxlength="50">
+          <button id="register-btn">Register PC</button>
+        </div>
+        <div id="registration-result" class="result-message"></div>
+      </section>
+      
+      <section class="stats-overview">
+        <div class="stat-card">
+          <h3>Total PCs</h3>
+          <span id="total-pcs">0</span>
+        </div>
+        <div class="stat-card">
+          <h3>Online</h3>
+          <span id="online-pcs">0</span>
+        </div>
+        <div class="stat-card">
+          <h3>Offline</h3>
+          <span id="offline-pcs">0</span>
+        </div>
+        <div class="stat-card">
+          <h3>Errors</h3>
+          <span id="error-count">0</span>
+        </div>
+      </section>
+      
+      <section class="pcs-grid">
+        <h2>Registered PCs</h2>
+        <div id="pcs-container">
+          <!-- PC cards will be dynamically inserted here -->
+        </div>
+      </section>
+    </div>
+    
+    <!-- Errors Tab -->
+    <div id="errors" class="tab-content">
+      <section class="errors-section">
+        <h2>System Errors</h2>
+        <div class="error-controls">
+          <select id="error-filter">
+            <option value="all">All Errors</option>
+            <option value="critical">Critical</option>
+            <option value="warning">Warning</option>
+            <option value="info">Info</option>
+          </select>
+          <button id="clear-errors">Clear All</button>
+        </div>
+        <div id="errors-container">
+          <!-- Errors will be dynamically inserted here -->
+        </div>
+      </section>
+    </div>
+    
+    <!-- Apps Tab -->
+    <div id="apps" class="tab-content">
+      <section class="apps-section">
+        <h2>Applications</h2>
+        <div class="app-controls">
+          <select id="pc-filter">
+            <option value="all">All PCs</option>
+          </select>
+        </div>
+        <div id="apps-container">
+          <!-- Apps will be dynamically inserted here -->
+        </div>
+      </section>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content">
+      <section class="settings-section">
+        <h2>System Settings</h2>
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h3>Monitoring Settings</h3>
+            <div class="setting-item">
+              <label for="refresh-rate">Refresh Rate (seconds)</label>
+              <input type="number" id="refresh-rate" value="2" min="1" max="60">
+            </div>
+            <div class="setting-item">
+              <label for="alert-threshold">Alert Threshold</label>
+              <select id="alert-threshold">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="setting-card">
+            <h3>Display Settings</h3>
+            <div class="setting-item">
+              <label for="theme">Theme</label>
+              <select id="theme">
+                <option value="futuristic" selected>Futuristic</option>
+                <option value="classic">Classic</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="animations">Animations</label>
+              <input type="checkbox" id="animations" checked>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-actions">
+          <button id="save-settings" class="save-btn">Save Settings</button>
+          <button id="reset-settings" class="reset-btn">Reset to Default</button>
+        </div>
+      </section>
+    </div>
+  </main>
+  
+  <script src="app.js"></script>
 </body>
 </html>
