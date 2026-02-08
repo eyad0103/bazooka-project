@@ -124,6 +124,13 @@ class APIKeyController {
         if (typeof aiChat !== 'undefined') {
           aiChat.checkAPIKeyStatus();
         }
+        
+        // Also refresh other tabs that might need API key status
+        setTimeout(() => {
+          if (typeof errors !== 'undefined') {
+            errors.loadErrors();
+          }
+        }, 500);
       } else {
         showToast('Failed to save API key', 'error');
       }
@@ -190,6 +197,13 @@ class APIKeyController {
         if (typeof aiChat !== 'undefined') {
           aiChat.checkAPIKeyStatus();
         }
+        
+        // Also refresh other tabs that might need API key status
+        setTimeout(() => {
+          if (typeof errors !== 'undefined') {
+            errors.loadErrors();
+          }
+        }, 500);
       } else {
         showToast('Failed to delete API key', 'error');
       }
