@@ -8,28 +8,24 @@ class Encryption {
     this.ivLength = config.encryption.ivLength;
     this.saltLength = config.encryption.saltLength;
     this.tagLength = config.encryption.tagLength;
-    this.secretKey = crypto.scryptSync(config.encryption.secretKey, 'salt', this.keyLength);
+    this.secretKey = config.encryption.secretKey;
   }
 
   encrypt(text) {
     try {
       const iv = crypto.randomBytes(this.ivLength);
       const salt = crypto.randomBytes(this.saltLength);
-      const key = crypto.scryptSync(this.secretKey, salt, this.keyLength);
+      const key = crypto.scryptSync(config.encryption.secretKey, salt, this.keyLength);
       
-      const cipher = crypto.createCipher(this.algorithm, key);
-      cipher.setAAD(salt);
+      const cipher = crypto.createCipheriv(this.algorithm, key, iv);
       
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
       
-      const tag = cipher.getAuthTag();
-      
       return {
         encrypted,
         iv: iv.toString('hex'),
-        salt: salt.toString('hex'),
-        tag: tag.toString('hex')
+        salt: salt.toString('hex')
       };
     } catch (error) {
       console.error('Encryption error:', error);
@@ -39,13 +35,11 @@ class Encryption {
 
   decrypt(encryptedData) {
     try {
-      const { encrypted, iv, salt, tag } = encryptedData;
+      const { encrypted, iv, salt } = encryptedData;
       
-      const key = crypto.scryptSync(this.secretKey, Buffer.from(salt, 'hex'), this.keyLength);
+      const key = crypto.scryptSync(config.encryption.secretKey, Buffer.from(salt, 'hex'), this.keyLength);
       
-      const decipher = crypto.createDecipher(this.algorithm, key);
-      decipher.setAAD(Buffer.from(salt, 'hex'));
-      decipher.setAuthTag(Buffer.from(tag, 'hex'));
+      const decipher = crypto.createDecipheriv(this.algorithm, key, Buffer.from(iv, 'hex'));
       
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');

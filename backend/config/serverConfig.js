@@ -10,7 +10,7 @@ const config = {
   
   // Encryption
   encryption: {
-    algorithm: 'aes-256-gcm',
+    algorithm: 'aes-256-cbc',
     keyLength: 32,
     ivLength: 16,
     saltLength: 32,

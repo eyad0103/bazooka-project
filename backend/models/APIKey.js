@@ -27,6 +27,7 @@ class APIKey {
   toJSON() {
     return {
       id: this.id,
+      key: this.key,
       description: this.description,
       createdAt: this.createdAt,
       lastUsed: this.lastUsed,
