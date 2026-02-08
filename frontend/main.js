@@ -69,6 +69,9 @@ class BazookaMonitor {
       case 'errors':
         this.refreshErrors();
         break;
+      case 'apps':
+        this.loadApps();
+        break;
       case 'settings':
         this.loadSettings();
         break;
@@ -240,6 +243,154 @@ class BazookaMonitor {
     document.getElementById('online-pcs').textContent = onlinePCs;
     document.getElementById('offline-pcs').textContent = offlinePCs;
     document.getElementById('error-count').textContent = recentErrors;
+  }
+
+  // Load Apps Content
+  async loadApps() {
+    try {
+      await this.refreshApps();
+      await this.loadPCsForFilter();
+    } catch (error) {
+      console.error('Failed to load apps:', error);
+    }
+  }
+
+  async refreshApps() {
+    try {
+      const appsData = await this.apiCall('/apps-status');
+      this.updateAppsDisplay(appsData.apps);
+    } catch (error) {
+      console.error('Failed to refresh apps:', error);
+      const container = document.getElementById('apps-container');
+      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Failed to load applications</p>';
+    }
+  }
+
+  async loadPCsForFilter() {
+    try {
+      const pcsData = await this.apiCall('/pcs');
+      const filter = document.getElementById('pc-filter');
+      
+      // Clear existing options except "All PCs"
+      filter.innerHTML = '<option value="all">All PCs</option>';
+      
+      // Add PC options
+      pcsData.pcs.forEach(pc => {
+        const option = document.createElement('option');
+        option.value = pc.id;
+        option.textContent = pc.name;
+        filter.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Failed to load PCs for filter:', error);
+    }
+  }
+
+  updateAppsDisplay(apps) {
+    const container = document.getElementById('apps-container');
+    const filter = document.getElementById('pc-filter').value;
+    
+    const filteredApps = filter === 'all' 
+      ? apps 
+      : apps.filter(app => app.pcId === filter);
+
+    if (filteredApps.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No applications to display.</p>';
+      return;
+    }
+
+    container.innerHTML = filteredApps.map(app => this.createAppCard(app)).join('');
+  }
+
+  createAppCard(app) {
+    const statusClass = app.status.toLowerCase().replace('_', '');
+    const lastUpdated = new Date(app.lastUpdated).toLocaleString();
+    
+    // Get appropriate icon for app
+    const appIcon = this.getAppIcon(app.name);
+    
+    return `
+      <div class="app-card ${statusClass}">
+        <div class="app-header">
+          <div class="app-icon">${appIcon}</div>
+          <div class="app-name">${app.name}</div>
+          <div class="app-status ${statusClass}">${app.status.replace('_', ' ')}</div>
+        </div>
+        <div class="app-details">
+          <div class="app-info">
+            <span><strong>PC:</strong> <span class="pc-name">${app.pcName}</span></span>
+            <span><strong>Version:</strong> ${app.version || 'N/A'}</span>
+          </div>
+          <div class="app-info">
+            <span><strong>Last Updated:</strong> ${lastUpdated}</span>
+          </div>
+          ${app.memoryUsage || app.cpuUsage ? `
+            <div class="app-metrics">
+              ${app.memoryUsage ? `
+                <div class="metric">
+                  <span class="metric-value">${app.memoryUsage}</span>
+                  <span class="metric-label">Memory</span>
+                </div>
+              ` : ''}
+              ${app.cpuUsage ? `
+                <div class="metric">
+                  <span class="metric-value">${app.cpuUsage}</span>
+                  <span class="metric-label">CPU</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  getAppIcon(appName) {
+    const icons = {
+      'chrome': '🌐',
+      'firefox': '🦊',
+      'edge': '📘',
+      'code': '💻',
+      'vscode': '💻',
+      'node': '🟢',
+      'python': '🐍',
+      'java': '☕',
+      'docker': '🐳',
+      'mysql': '🗄️',
+      'mongodb': '🍃',
+      'nginx': '🌍',
+      'apache': '🪶',
+      'spotify': '🎵',
+      'discord': '💬',
+      'slack': '📱',
+      'steam': '🎮',
+      'office': '📄',
+      'excel': '📊',
+      'word': '📝',
+      'powerpoint': '📽️'
+    };
+    
+    const name = appName.toLowerCase();
+    for (const [key, icon] of Object.entries(icons)) {
+      if (name.includes(key)) {
+        return icon;
+      }
+    }
+    
+    // Default icons based on common patterns
+    if (name.includes('browser') || name.includes('web')) return '🌐';
+    if (name.includes('editor') || name.includes('code')) return '💻';
+    if (name.includes('game') || name.includes('play')) return '🎮';
+    if (name.includes('music') || name.includes('audio')) return '🎵';
+    if (name.includes('video') || name.includes('media')) return '🎬';
+    if (name.includes('database') || name.includes('db')) return '🗄️';
+    if (name.includes('server') || name.includes('service')) return '🖥️';
+    
+    return '📱'; // Default icon
+  }
+
+  filterApps() {
+    this.refreshApps();
   }
 
   // Load Settings Content
@@ -487,6 +638,14 @@ function filterErrors() {
   monitor.filterErrors();
 }
 
+function refreshApps() {
+  monitor.refreshApps();
+}
+
+function filterApps() {
+  monitor.filterApps();
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   monitor = new BazookaMonitor();
@@ -512,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard navigation for tabs
   document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key >= '1' && e.key <= '3') {
+    if (e.altKey && e.key >= '1' && e.key <= '4') {
       const tabIndex = parseInt(e.key) - 1;
       const tabButtons = document.querySelectorAll('.tab-btn');
       if (tabButtons[tabIndex]) {

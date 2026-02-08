@@ -15,6 +15,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // In-memory storage (for now)
 const pcs = new Map();
 const errors = [];
+const apps = new Map(); // Store apps per PC
 
 // Routes
 app.get('/', (req, res) => {
@@ -34,6 +35,8 @@ app.get('/api', (req, res) => {
       'POST /report-error',
       'GET /errors',
       'GET /pcs',
+      'POST /apps-status',
+      'GET /apps-status',
       'GET /api/settings',
       'POST /api/settings'
     ]
@@ -133,6 +136,70 @@ app.get('/pcs', (req, res) => {
   res.json({
     pcs: pcList,
     total: pcList.length
+  });
+});
+
+// Application Status endpoints
+app.post('/apps-status', (req, res) => {
+  const { apiKey, applications } = req.body;
+  
+  if (!apiKey || !pcs.has(apiKey)) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  if (!applications || !Array.isArray(applications)) {
+    return res.status(400).json({ error: 'Applications array is required' });
+  }
+
+  const pc = pcs.get(apiKey);
+  const timestamp = new Date().toISOString();
+  
+  // Store apps for this PC
+  const pcApps = applications.map(app => ({
+    id: uuidv4(),
+    pcId: pc.id,
+    pcName: pc.name,
+    name: app.name,
+    status: app.status || 'UNKNOWN', // RUNNING, NOT_RESPONDING, STOPPED, UNKNOWN
+    version: app.version || null,
+    memoryUsage: app.memoryUsage || null,
+    cpuUsage: app.cpuUsage || null,
+    lastUpdated: timestamp
+  }));
+  
+  apps.set(pc.id, pcApps);
+  
+  res.json({
+    message: 'Application status updated successfully',
+    pcName: pc.name,
+    appsUpdated: pcApps.length,
+    timestamp
+  });
+});
+
+app.get('/apps-status', (req, res) => {
+  const { pcId } = req.query;
+  
+  let allApps = [];
+  
+  if (pcId) {
+    // Return apps for specific PC
+    const pcApps = apps.get(pcId) || [];
+    allApps = pcApps;
+  } else {
+    // Return all apps for all PCs
+    for (const pcApps of apps.values()) {
+      allApps.push(...pcApps);
+    }
+  }
+  
+  // Sort by last updated
+  allApps.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+  
+  res.json({
+    apps: allApps,
+    total: allApps.length,
+    filteredByPc: pcId || null
   });
 });
 
