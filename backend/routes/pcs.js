@@ -130,4 +130,38 @@ router.get('/:pcId', async (req, res) => {
   }
 });
 
+// Heartbeat endpoint (for agent updates)
+router.post('/heartbeat', async (req, res) => {
+  try {
+    const { pcId, systemInfo } = req.body;
+    
+    if (!pcId) {
+      return res.status(400).json({ error: 'PC ID is required' });
+    }
+    
+    // Check if PC exists
+    let pc = await db.getPC(pcId);
+    
+    if (pc) {
+      // Update existing PC
+      pc.updateHeartbeat(systemInfo);
+      await db.savePC(pc.toJSON());
+      logger.info('PC heartbeat updated', { pcId, displayName: pc.displayName });
+      
+      res.json({
+        success: true,
+        pcId: pc.pcId,
+        displayName: pc.displayName,
+        status: pc.status,
+        message: 'Heartbeat received'
+      });
+    } else {
+      return res.status(404).json({ error: 'PC not found' });
+    }
+  } catch (error) {
+    logger.error('Heartbeat error', { error: error.message });
+    res.status(500).json({ error: 'Failed to process heartbeat' });
+  }
+});
+
 module.exports = router;

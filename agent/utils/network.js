@@ -32,20 +32,33 @@ class NetworkClient extends EventEmitter {
 
   async sendHeartbeat(systemInfo) {
     try {
-      const response = await this.makeRequest('POST', '/api/pcs/register', {
-        pcId: this.config.pcId,
-        systemInfo
-      });
-
-      if (response.success) {
-        if (!this.isConnected) {
+      // First try to register (for new PCs)
+      if (!this.isConnected) {
+        const response = await this.makeRequest('POST', '/api/pcs/register', {
+          pcId: this.config.pcId,
+          systemInfo
+        });
+        
+        if (response.success) {
           this.isConnected = true;
           this.reconnectAttempts = 0;
           this.emit('connected');
+          this.emit('heartbeat-sent', response);
         }
+        
+        return response;
+      }
+      
+      // For existing PCs, use heartbeat endpoint
+      const response = await this.makeRequest('POST', '/api/pcs/heartbeat', {
+        pcId: this.config.pcId,
+        systemInfo
+      });
+      
+      if (response.success) {
         this.emit('heartbeat-sent', response);
       }
-
+      
       return response;
     } catch (error) {
       this.isConnected = false;

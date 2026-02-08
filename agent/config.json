@@ -1,5 +1,5 @@
 {
-  "pcId": "",
+  "pcId": "7c8f66ca-50f2-4b69-8cef-07c6160af812",
   "serverUrl": "http://localhost:3000",
   "heartbeatInterval": 30000,
   "errorCheckInterval": 5000,

@@ -116,8 +116,12 @@ class APIKeyController {
       
       if (response.success) {
         showToast('API key saved successfully', 'success');
-        keyInput.value = '';
-        descriptionInput.value = '';
+        
+        // Only clear input if save was successful and user wants to clear it
+        // Keep the key visible for debugging/testing purposes
+        // keyInput.value = '';
+        // descriptionInput.value = '';
+        
         await this.loadAPIKeyStatus();
         
         // Update AI chat status
