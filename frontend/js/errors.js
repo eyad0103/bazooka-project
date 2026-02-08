@@ -267,11 +267,14 @@ class ErrorsController {
 
     try {
       showLoading();
-      const response = await api.explainError(this.currentError.errorId);
+      
+      // Use new AI API
+      const aiApi = require('../api/aiApi');
+      const response = await aiApi.explainError(this.currentError.errorId);
       
       if (response.success) {
         this.showAIExplanation(response.explanation);
-      } else if (response.requiresApiKey) {
+      } else if (response.error.includes('not configured')) {
         showToast('API key required for AI explanations', 'warning');
         // Switch to API key tab
         document.querySelector('[data-tab="api-key"]').click();

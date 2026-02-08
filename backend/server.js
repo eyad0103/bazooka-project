@@ -12,8 +12,8 @@ const logger = require('./utils/logger');
 // Import routes
 const pcsRoutes = require('./routes/pcs');
 const errorsRoutes = require('./routes/errors');
-const aiRoutes = require('./routes/ai');
-const apiKeyRoutes = require('./routes/apiKey');
+const aiRoutes = require('./routes/ai.routes');
+const settingsRoutes = require('./routes/settings.routes');
 
 const app = express();
 
@@ -54,7 +54,7 @@ app.use((req, res, next) => {
 app.use('/api/pcs', pcsRoutes);
 app.use('/api/errors', errorsRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/api-key', apiKeyRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

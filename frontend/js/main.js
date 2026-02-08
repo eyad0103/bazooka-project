@@ -18,9 +18,18 @@ class BazookaMonitoringApp {
     // Initialize all tab controllers
     this.controllers.dashboard = new DashboardController();
     this.controllers.errors = new ErrorsController();
-    this.controllers.aiChat = new AIChatController();
-    this.controllers.apiKey = new APIKeyController();
+    
+    // Initialize new AI components
+    const AiChatComponent = require('../components/AiChat.jsx');
+    const ApiKeySettingsComponent = require('../components/ApiKeySettings.jsx');
+    const aiStatusStore = require('../state/aiStatusStore');
+    
+    this.controllers.aiChat = new AiChatComponent();
+    this.controllers.apiKey = new ApiKeySettingsComponent();
     this.controllers.pcManagement = new PCManagementController();
+
+    // Start AI status monitoring
+    aiStatusStore.startPeriodicCheck();
 
     // Make them globally available
     window.dashboard = this.controllers.dashboard;

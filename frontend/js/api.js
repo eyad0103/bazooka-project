@@ -69,31 +69,8 @@ class APIClient {
     return this.request('PUT', `/errors/${errorId}/resolve`);
   }
 
-  // AI endpoints
-  async explainError(errorId) {
-    return this.request('POST', '/ai/explain_error', { errorId });
-  }
-
-  async chatWithAI(message, context = null) {
-    return this.request('POST', '/ai/chat', { message, context });
-  }
-
-  // API Key endpoints
-  async getAPIKeyStatus() {
-    return this.request('GET', '/api-key');
-  }
-
-  async saveAPIKey(key, description = '') {
-    return this.request('POST', '/api-key', { key, description });
-  }
-
-  async testAPIKey(key) {
-    return this.request('POST', '/api-key/test', { key });
-  }
-
-  async deleteAPIKey() {
-    return this.request('DELETE', '/api-key');
-  }
+  // Note: AI and API Key endpoints are now handled by dedicated API clients
+  // See: frontend/api/aiApi.js and frontend/api/settingsApi.js
 
   // Utility endpoints
   async getHealth() {

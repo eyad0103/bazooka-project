@@ -1,14 +1,19 @@
-// API Key Tab Controller
+// API Key Settings Component - Uses only backend truth
 
-class APIKeyController {
+const settingsApi = require('../api/settingsApi');
+const aiStatusStore = require('../state/aiStatusStore');
+
+class ApiKeySettingsComponent {
   constructor() {
-    this.currentKeyData = null;
+    this.unsubscribe = null;
     this.init();
   }
 
   init() {
     this.bindEvents();
-    this.loadAPIKeyStatus();
+    this.subscribeToStatus();
+    // Force initial status refresh
+    aiStatusStore.refresh();
   }
 
   bindEvents() {
@@ -29,25 +34,16 @@ class APIKeyController {
     });
   }
 
-  async loadAPIKeyStatus() {
-    try {
-      const response = await api.getAPIKeyStatus();
-      
-      if (response.success) {
-        this.currentKeyData = response;
-        this.updateAPIKeyStatus(response);
-      }
-    } catch (error) {
-      console.error('Failed to load API key status:', error);
-      showToast('Failed to load API key status', 'error');
-    }
+  subscribeToStatus() {
+    this.unsubscribe = aiStatusStore.subscribe((status) => {
+      this.updateAPIKeyStatusUI(status);
+    });
   }
 
-  updateAPIKeyStatus(keyData) {
+  updateAPIKeyStatusUI(status) {
     const statusDiv = document.getElementById('api-key-info');
     
-    if (keyData.hasKey && keyData.apiKey) {
-      const key = keyData.apiKey;
+    if (status.configured) {
       statusDiv.innerHTML = `
         <div class="status-card success">
           <div class="status-header">
@@ -57,22 +53,15 @@ class APIKeyController {
           <div class="status-details">
             <div class="detail-row">
               <label>Description:</label>
-              <span>${key.description || 'No description'}</span>
+              <span>${status.description || 'No description'}</span>
             </div>
             <div class="detail-row">
               <label>Created:</label>
-              <span>${formatDateTime(key.createdAt)}</span>
+              <span>${status.createdAt ? this.formatDateTime(status.createdAt) : 'Unknown'}</span>
             </div>
             <div class="detail-row">
               <label>Last Used:</label>
-              <span>${key.lastUsed ? formatDateTime(key.lastUsed) : 'Never'}</span>
-            </div>
-            <div class="detail-row">
-              <label>Status:</label>
-              <span class="status-indicator ${key.isActive ? 'online' : 'offline'}">
-                <i class="fas fa-circle"></i>
-                ${key.isActive ? 'Active' : 'Inactive'}
-              </span>
+              <span>${status.lastUsed ? this.formatDateTime(status.lastUsed) : 'Never'}</span>
             </div>
           </div>
         </div>
@@ -99,41 +88,30 @@ class APIKeyController {
     
     const key = keyInput.value.trim();
     const description = descriptionInput.value.trim();
-    
+
     if (!key) {
       showToast('API key is required', 'warning');
       return;
     }
-    
+
     if (!key.startsWith('sk-or-')) {
       showToast('Invalid API key format. Key should start with "sk-or-"', 'error');
       return;
     }
-    
+
     try {
       showLoading();
-      const response = await api.saveAPIKey(key, description);
+      const response = await settingsApi.saveApiKey(key, description);
       
       if (response.success) {
         showToast('API key saved successfully', 'success');
         
-        // Clear input by default for security, but allow user to keep it visible
+        // Clear input fields for security
         keyInput.value = '';
         descriptionInput.value = '';
         
-        await this.loadAPIKeyStatus();
-        
-        // Update AI chat status
-        if (typeof aiChat !== 'undefined') {
-          aiChat.checkAPIKeyStatus();
-        }
-        
-        // Also refresh other tabs that might need API key status
-        setTimeout(() => {
-          if (typeof errors !== 'undefined') {
-            errors.loadErrors();
-          }
-        }, 500);
+        // Refresh status from backend
+        await aiStatusStore.refresh();
       } else {
         showToast('Failed to save API key', 'error');
       }
@@ -161,23 +139,29 @@ class APIKeyController {
 
     try {
       showLoading();
-      const response = await api.testAPIKey(key);
+      const response = await settingsApi.testApiKey(key);
       
       if (response.success) {
-        showToast(`API key is valid! ${response.modelsAvailable} models available`, 'success');
+        if (response.valid) {
+          showToast('API key is valid', 'success');
+        } else {
+          showToast('API key is invalid', 'error');
+        }
       } else {
-        showToast('API key test failed', 'error');
+        showToast('Failed to test API key', 'error');
       }
     } catch (error) {
       console.error('API key test error:', error);
-      showToast('API key test failed', 'error');
+      showToast('Failed to test API key', 'error');
     } finally {
       hideLoading();
     }
   }
 
   async deleteAPIKey() {
-    if (!this.currentKeyData || !this.currentKeyData.hasKey) {
+    const status = aiStatusStore.getStatus();
+    
+    if (!status.configured) {
       showToast('No API key to delete', 'warning');
       return;
     }
@@ -188,25 +172,17 @@ class APIKeyController {
 
     try {
       showLoading();
-      const response = await api.deleteAPIKey();
+      const response = await settingsApi.deleteApiKey();
       
       if (response.success) {
         showToast('API key deleted successfully', 'success');
+        
+        // Clear input fields
         document.getElementById('api-key-input').value = '';
         document.getElementById('api-key-description').value = '';
-        await this.loadAPIKeyStatus();
         
-        // Update AI chat status
-        if (typeof aiChat !== 'undefined') {
-          aiChat.checkAPIKeyStatus();
-        }
-        
-        // Also refresh other tabs that might need API key status
-        setTimeout(() => {
-          if (typeof errors !== 'undefined') {
-            errors.loadErrors();
-          }
-        }, 500);
+        // Refresh status from backend
+        await aiStatusStore.refresh();
       } else {
         showToast('Failed to delete API key', 'error');
       }
@@ -230,7 +206,17 @@ class APIKeyController {
       toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
     }
   }
+
+  formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  }
+
+  destroy() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
 }
 
-// Global API key instance
-let apiKey;
+module.exports = ApiKeySettingsComponent;

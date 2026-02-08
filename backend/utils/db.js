@@ -185,6 +185,19 @@ class Database {
       return this.memoryStorage.apiKeys.get('main');
     }
   }
+
+  async deleteAPIKey() {
+    if (this.isConnected) {
+      try {
+        await this.db.collection('apiKeys').deleteOne({ id: 'main' });
+      } catch (error) {
+        console.error('Failed to delete API key from database:', error);
+        this.memoryStorage.apiKeys.delete('main');
+      }
+    } else {
+      this.memoryStorage.apiKeys.delete('main');
+    }
+  }
 }
 
 module.exports = new Database();
