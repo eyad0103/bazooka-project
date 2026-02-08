@@ -1,217 +1,325 @@
-const axios = require('axios');
-const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
-// Configuration
-const SERVER_URL = process.env.BAZOOKA_SERVER || 'http://localhost:3000';
-const PC_NAME = os.hostname();
-let API_KEY = '';
+// Import utilities
+const SystemInfo = require('./utils/systemInfo');
+const ErrorMonitor = require('./utils/errorMonitor');
+const NetworkClient = require('./utils/network');
 
-// Agent state
-let isRunning = true;
-let heartbeatInterval;
-let appsInterval;
+class BazookaAgent {
+  constructor() {
+    this.config = this.loadConfig();
+    this.pcId = this.getOrCreatePCId();
+    this.systemInfo = new SystemInfo();
+    this.errorMonitor = new ErrorMonitor(this.config);
+    this.networkClient = new NetworkClient({ ...this.config, pcId: this.pcId });
+    
+    this.isRunning = false;
+    this.intervals = {
+      heartbeat: null,
+      systemInfo: null
+    };
 
-// Register PC with server
-async function registerPC() {
-  try {
-    console.log(`🚀 Registering PC: ${PC_NAME}`);
-    
-    const response = await axios.post(`${SERVER_URL}/pcs`, { 
-      name: PC_NAME 
-    });
-    
-    API_KEY = response.data.apiKey;
-    console.log(`✅ PC registered successfully!`);
-    console.log(`📋 PC Name: ${PC_NAME}`);
-    console.log(`🔑 API Key: ${API_KEY}`);
-    console.log(`🆔 PC ID: ${response.data.pcId}`);
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to register PC:', error.message);
-    return false;
+    this.setupEventHandlers();
   }
-}
 
-// Send heartbeat to server
-async function sendHeartbeat() {
-  if (!API_KEY) return;
-  
-  try {
-    // Get system metrics
-    const cpuUsage = Math.floor(Math.random() * 100); // Simulated CPU usage
-    const memoryUsage = Math.floor(Math.random() * 100); // Simulated memory usage
-    const uptime = os.uptime();
-    
-    const response = await axios.post(`${SERVER_URL}/heartbeat`, {
-      apiKey: API_KEY,
-      status: 'ONLINE',
-      cpu: cpuUsage,
-      memory: memoryUsage,
-      uptime: uptime
-    });
-    
-    console.log(`💓 Heartbeat sent - CPU: ${cpuUsage}%, Memory: ${memoryUsage}%`);
-  } catch (error) {
-    console.error('❌ Failed to send heartbeat:', error.message);
-  }
-}
-
-// Get running applications (simplified version)
-function getRunningApps() {
-  // In a real implementation, you would use systeminformation or similar
-  // For now, return some example apps
-  return [
-    {
-      name: 'Chrome',
-      status: 'RUNNING',
-      version: '120.0.6099',
-      cpuUsage: `${Math.floor(Math.random() * 30)}%`,
-      memoryUsage: `${Math.floor(Math.random() * 1000)} MB`
-    },
-    {
-      name: 'VS Code',
-      status: 'RUNNING', 
-      version: '1.85.0',
-      cpuUsage: `${Math.floor(Math.random() * 20)}%`,
-      memoryUsage: `${Math.floor(Math.random() * 500)} MB`
-    },
-    {
-      name: 'Node.js',
-      status: 'RUNNING',
-      version: '20.10.0',
-      cpuUsage: `${Math.floor(Math.random() * 15)}%`,
-      memoryUsage: `${Math.floor(Math.random() * 200)} MB`
+  loadConfig() {
+    try {
+      const configPath = path.join(__dirname, 'config.json');
+      const configData = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configData);
+    } catch (error) {
+      console.error('Failed to load config:', error.message);
+      return this.getDefaultConfig();
     }
-  ];
-}
+  }
 
-// Send application status to server
-async function sendApps() {
-  if (!API_KEY) return;
-  
-  try {
-    const apps = getRunningApps();
+  getDefaultConfig() {
+    return {
+      serverUrl: 'http://localhost:3000',
+      heartbeatInterval: 30000,
+      errorCheckInterval: 5000,
+      systemInfoInterval: 60000,
+      logging: {
+        level: 'info',
+        maxFileSize: '10MB',
+        maxFiles: 5
+      }
+    };
+  }
+
+  getOrCreatePCId() {
+    let pcId = this.config.pcId;
     
-    const response = await axios.post(`${SERVER_URL}/apps-status`, {
-      apiKey: API_KEY,
-      apps: apps.map(app => ({
-        ...app,
-        pcName: PC_NAME
-      }))
+    if (!pcId) {
+      pcId = uuidv4();
+      this.config.pcId = pcId;
+      this.saveConfig();
+      console.log('Generated new PC ID:', pcId);
+    }
+    
+    return pcId;
+  }
+
+  saveConfig() {
+    try {
+      const configPath = path.join(__dirname, 'config.json');
+      fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2));
+    } catch (error) {
+      console.error('Failed to save config:', error.message);
+    }
+  }
+
+  setupEventHandlers() {
+    // Error monitor events
+    this.errorMonitor.on('error', (errorData) => {
+      this.handleDetectedError(errorData);
     });
-    
-    console.log(`📱 Apps status sent - ${apps.length} applications`);
-  } catch (error) {
-    console.error('❌ Failed to send apps status:', error.message);
-  }
-}
 
-// Report error to server
-async function reportError(type, message, details = null) {
-  if (!API_KEY) return;
-  
-  try {
-    const response = await axios.post(`${SERVER_URL}/errors`, {
-      apiKey: API_KEY,
-      type: type,
-      message: message,
-      details: details
+    this.errorMonitor.on('started', () => {
+      console.log('Error monitoring started');
     });
+
+    // Network client events
+    this.networkClient.on('registered', (response) => {
+      console.log('PC registered successfully:', response.displayName);
+    });
+
+    this.networkClient.on('connected', () => {
+      console.log('Connected to server');
+    });
+
+    this.networkClient.on('disconnected', () => {
+      console.log('Disconnected from server');
+    });
+
+    this.networkClient.on('error', (errorInfo) => {
+      console.error('Network error:', errorInfo);
+    });
+
+    this.networkClient.on('reconnect-attempt', (info) => {
+      console.log(`Reconnect attempt ${info.attempt}/${this.networkClient.maxReconnectAttempts}`);
+    });
+
+    // Process events
+    process.on('SIGINT', () => {
+      console.log('Received SIGINT, shutting down gracefully...');
+      this.stop();
+    });
+
+    process.on('SIGTERM', () => {
+      console.log('Received SIGTERM, shutting down gracefully...');
+      this.stop();
+    });
+  }
+
+  async start() {
+    if (this.isRunning) {
+      console.log('Agent is already running');
+      return;
+    }
+
+    try {
+      console.log('Starting Bazooka Agent...');
+      console.log('PC ID:', this.pcId);
+      console.log('Server URL:', this.config.serverUrl);
+
+      // Start error monitoring
+      this.errorMonitor.start();
+
+      // Register PC with server
+      await this.registerWithServer();
+
+      // Start periodic tasks
+      this.startPeriodicTasks();
+
+      this.isRunning = true;
+      console.log('Bazooka Agent started successfully');
+
+    } catch (error) {
+      console.error('Failed to start agent:', error.message);
+      this.errorMonitor.reportError('startup_error', error.message, {
+        stack: error.stack,
+        type: 'critical'
+      });
+    }
+  }
+
+  async stop() {
+    if (!this.isRunning) {
+      console.log('Agent is not running');
+      return;
+    }
+
+    console.log('Stopping Bazooka Agent...');
+
+    // Clear intervals
+    if (this.intervals.heartbeat) {
+      clearInterval(this.intervals.heartbeat);
+    }
+    if (this.intervals.systemInfo) {
+      clearInterval(this.intervals.systemInfo);
+    }
+
+    // Stop error monitoring
+    this.errorMonitor.stop();
+
+    // Report shutdown
+    try {
+      await this.networkClient.reportError({
+        errorType: 'system_signal',
+        message: 'Agent shutdown',
+        details: { type: 'info', shutdownType: 'graceful' }
+      });
+    } catch (error) {
+      console.error('Failed to report shutdown:', error.message);
+    }
+
+    this.isRunning = false;
+    console.log('Bazooka Agent stopped');
+  }
+
+  async registerWithServer() {
+    try {
+      const systemInfo = this.systemInfo.getDetailedInfo();
+      
+      const response = await this.networkClient.registerPC({
+        pcId: this.pcId,
+        displayName: this.getPCDisplayName(),
+        systemInfo
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Failed to register with server:', error.message);
+      throw error;
+    }
+  }
+
+  startPeriodicTasks() {
+    // Heartbeat interval
+    this.intervals.heartbeat = setInterval(async () => {
+      try {
+        await this.sendHeartbeat();
+      } catch (error) {
+        console.error('Heartbeat failed:', error.message);
+      }
+    }, this.config.heartbeatInterval);
+
+    // System info interval
+    this.intervals.systemInfo = setInterval(async () => {
+      try {
+        await this.updateSystemInfo();
+      } catch (error) {
+        console.error('System info update failed:', error.message);
+      }
+    }, this.config.systemInfoInterval);
+
+    console.log(`Started periodic tasks:`);
+    console.log(`- Heartbeat every ${this.config.heartbeatInterval}ms`);
+    console.log(`- System info every ${this.config.systemInfoInterval}ms`);
+  }
+
+  async sendHeartbeat() {
+    const systemInfo = {
+      timestamp: new Date().toISOString(),
+      uptime: this.systemInfo.getAgentUptime(),
+      memory: process.memoryUsage(),
+      cpu: this.systemInfo.getCPUUsage()
+    };
+
+    await this.networkClient.sendHeartbeat(systemInfo);
+  }
+
+  async updateSystemInfo() {
+    const systemInfo = this.systemInfo.getDetailedInfo();
     
-    console.log(`⚠️ Error reported: ${type} - ${message}`);
-  } catch (error) {
-    console.error('❌ Failed to report error:', error.message);
+    // Check for system issues
+    this.checkSystemHealth(systemInfo);
+  }
+
+  checkSystemHealth(systemInfo) {
+    // Check memory usage
+    if (systemInfo.memoryUsage.percentage > 90) {
+      this.errorMonitor.reportError('memory_warning', 'High memory usage', {
+        usage: systemInfo.memoryUsage.percentage,
+        type: 'warning'
+      });
+    }
+
+    // Check CPU usage
+    if (systemInfo.cpu.usage.percentage > 95) {
+      this.errorMonitor.reportError('cpu_warning', 'High CPU usage', {
+        usage: systemInfo.cpu.usage.percentage,
+        type: 'warning'
+      });
+    }
+
+    // Check disk space (simplified)
+    if (systemInfo.disk.error) {
+      this.errorMonitor.reportError('disk_error', 'Disk information unavailable', {
+        error: systemInfo.disk.error,
+        type: 'warning'
+      });
+    }
+  }
+
+  async handleDetectedError(errorData) {
+    try {
+      await this.networkClient.reportError(errorData);
+      console.log('Error reported to server:', errorData.errorId);
+    } catch (error) {
+      console.error('Failed to report error to server:', error.message);
+    }
+  }
+
+  getPCDisplayName() {
+    const hostname = require('os').hostname();
+    return hostname || `PC-${this.pcId.substring(0, 8)}`;
+  }
+
+  // Public methods for external control
+  async forceHeartbeat() {
+    if (this.isRunning) {
+      await this.sendHeartbeat();
+    }
+  }
+
+  async reportCustomError(errorType, message, details = {}) {
+    this.errorMonitor.reportError(errorType, message, details);
+  }
+
+  getStatus() {
+    return {
+      isRunning: this.isRunning,
+      pcId: this.pcId,
+      connected: this.networkClient.isConnectedToServer(),
+      uptime: this.systemInfo.getAgentUptime(),
+      config: this.config,
+      errorStats: this.errorMonitor.getErrorStats()
+    };
   }
 }
 
-// Start monitoring
-async function startMonitoring() {
-  console.log(`🎯 Starting Bazooka PC Monitoring Agent...`);
-  console.log(`🌐 Server: ${SERVER_URL}`);
-  console.log(`💻 PC: ${PC_NAME}`);
-  console.log(`⏰ Started at: ${new Date().toISOString()}`);
-  console.log('');
-  
-  // Register PC
-  const registered = await registerPC();
-  if (!registered) {
-    console.error('❌ Failed to register PC. Exiting...');
-    process.exit(1);
-  }
-  
-  console.log('');
-  console.log('🔄 Starting monitoring loops...');
-  console.log('💓 Heartbeat: every 5 seconds');
-  console.log('📱 Apps check: every 10 seconds');
-  console.log('');
-  
-  // Start heartbeat interval
-  heartbeatInterval = setInterval(sendHeartbeat, 5000);
-  
-  // Start apps monitoring interval
-  appsInterval = setInterval(sendApps, 10000);
-  
-  // Send initial data
-  await sendHeartbeat();
-  await sendApps();
-  
-  // Simulate some errors for demonstration
-  setTimeout(() => {
-    reportError('WARNING', 'High CPU usage detected', 'CPU usage exceeded 80% threshold');
-  }, 30000);
-  
-  setTimeout(() => {
-    reportError('INFO', 'System update available', 'New security patches are available');
-  }, 60000);
-  
-  console.log('✅ Monitoring agent is running successfully!');
-  console.log('🛑 Press Ctrl+C to stop');
-}
-
-// Graceful shutdown
-function shutdown() {
-  console.log('\n🛑 Shutting down Bazooka Agent...');
-  
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
-  if (appsInterval) clearInterval(appsInterval);
-  
-  // Report shutdown
-  reportError('INFO', 'Agent shutdown', 'Bazooka monitoring agent stopped gracefully');
-  
-  console.log('👋 Goodbye!');
-  process.exit(0);
-}
-
-// Handle process signals
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('💥 Uncaught Exception:', error);
-  reportError('CRITICAL', 'Uncaught exception', error.message);
-  shutdown();
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection:', reason);
-  reportError('CRITICAL', 'Unhandled rejection', reason);
-  shutdown();
-});
-
-// Start the agent
+// Auto-start if this file is run directly
 if (require.main === module) {
-  startMonitoring().catch(error => {
-    console.error('💥 Failed to start agent:', error);
+  const agent = new BazookaAgent();
+  
+  agent.start().catch(error => {
+    console.error('Failed to start agent:', error);
     process.exit(1);
+  });
+
+  // Handle graceful shutdown
+  process.on('SIGINT', () => {
+    agent.stop().then(() => {
+      process.exit(0);
+    }).catch(error => {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    });
   });
 }
 
-module.exports = {
-  registerPC,
-  sendHeartbeat,
-  sendApps,
-  reportError,
-  startMonitoring
-};
+module.exports = BazookaAgent;

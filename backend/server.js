@@ -1,103 +1,186 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+const config = require('./config/serverConfig');
+const db = require('./utils/db');
+const logger = require('./utils/logger');
+
 // Import routes
 const pcsRoutes = require('./routes/pcs');
-const heartbeatRoutes = require('./routes/heartbeat');
 const errorsRoutes = require('./routes/errors');
-const appsRoutes = require('./routes/apps');
-const aiChatRoutes = require('./routes/ai-chat');
-const apiKeysRoutes = require('./routes/api-keys');
-
-// Initialize shared storage
-apiKeysRoutes.setPcsStorage(pcsRoutes.pcsStorage);
+const aiRoutes = require('./routes/ai');
+const apiKeyRoutes = require('./routes/apiKey');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://openrouter.ai"]
+    },
+  },
+}));
+
+// Rate limiting
+const limiter = rateLimit(config.rateLimit);
+app.use('/api/', limiter);
+
+// CORS
+app.use(cors(config.cors));
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  logger.debug(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
   next();
 });
 
-// Routes
-app.use('/pcs', pcsRoutes);
-app.use('/heartbeat', heartbeatRoutes);
-app.use('/errors', errorsRoutes);
-app.use('/apps-status', appsRoutes);
-app.use('/api/ai-chat', aiChatRoutes);
-app.use('/api/keys', apiKeysRoutes.router);
+// API routes
+app.use('/api/pcs', pcsRoutes);
+app.use('/api/errors', errorsRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/api-key', apiKeyRoutes);
 
-// Serve frontend
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: db.isConnected ? 'connected' : 'memory storage',
+    environment: config.nodeEnv
+  });
 });
 
-// API info
+// API info endpoint
 app.get('/api', (req, res) => {
   res.json({
-    message: 'BAZOOKA PC MONITORING SYSTEM',
-    version: '1.0.0',
-    endpoints: [
-      'GET /',
-      'GET /api',
-      'POST /pcs',
-      'GET /pcs',
-      'POST /heartbeat',
-      'POST /errors',
-      'GET /errors',
-      'POST /apps-status',
-      'GET /apps-status',
-      'POST /api/ai-chat',
-      'GET /api/ai-chat',
-      'DELETE /api/ai-chat',
-      'GET /api/keys',
-      'POST /api/keys/regenerate',
-      'POST /api/keys/revoke',
-      'GET /api/keys/audit',
-      'GET /api/keys/export'
-    ],
+    name: 'Bazooka PC Monitoring System',
+    version: '2.0.0',
+    description: 'Modular PC monitoring system with AI-powered error explanations',
+    endpoints: {
+      pcs: {
+        'POST /api/pcs/register': 'Register/update PC (agent)',
+        'GET /api/pcs': 'Get all PCs (dashboard)',
+        'PUT /api/pcs/:pcId/rename': 'Rename PC (dashboard)',
+        'GET /api/pcs/:pcId': 'Get PC details'
+      },
+      errors: {
+        'POST /api/errors/report': 'Report error (agent)',
+        'GET /api/errors': 'Get all errors (dashboard)',
+        'GET /api/errors/:errorId': 'Get error details',
+        'PUT /api/errors/:errorId/resolve': 'Mark error as resolved'
+      },
+      ai: {
+        'POST /api/ai/explain_error': 'Get AI explanation for error',
+        'POST /api/ai/chat': 'General AI chat'
+      },
+      apiKey: {
+        'GET /api/api-key': 'Get API key status',
+        'POST /api/api-key': 'Set/update API key',
+        'POST /api/api-key/test': 'Test API key',
+        'DELETE /api/api-key': 'Deactivate API key'
+      }
+    },
     features: [
-      'Real-time PC Monitoring',
-      'Heartbeat Tracking',
-      'Error Reporting',
-      'Application Monitoring',
-      'AI Chat Assistant',
-      'API Key Management',
-      'Futuristic Dashboard'
+      'Real-time PC monitoring',
+      'Error reporting and tracking',
+      'AI-powered error explanations',
+      'Centralized API key management',
+      'Modular architecture',
+      'Memory fallback for database failures'
     ]
   });
 });
 
-// Error handling
+// Serve frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Catch all handler for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Unhandled error', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
   res.status(500).json({
     error: 'Internal server error',
-    message: err.message
+    message: config.nodeEnv === 'development' ? err.message : 'Something went wrong'
   });
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     error: 'Not found',
-    message: 'The requested resource was not found'
+    message: `Route ${req.method} ${req.path} not found`
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Bazooka PC Monitoring Backend running on port ${PORT}`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}`);
-  console.log(`🔗 API: http://localhost:${PORT}/api`);
-  console.log(`⏰ Started at: ${new Date().toISOString()}`);
-});
+// Start server
+async function startServer() {
+  try {
+    // Connect to database
+    await db.connect();
+    
+    // Start server
+    const server = app.listen(config.port, () => {
+      logger.info(`Server started on port ${config.port}`, {
+        environment: config.nodeEnv,
+        database: db.isConnected ? 'MongoDB' : 'Memory Storage'
+      });
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+      logger.info('SIGTERM received, shutting down gracefully');
+      server.close(async () => {
+        await db.disconnect();
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', async () => {
+      logger.info('SIGINT received, shutting down gracefully');
+      server.close(async () => {
+        await db.disconnect();
+        process.exit(0);
+      });
+    });
+
+    return server;
+
+  } catch (error) {
+    logger.error('Failed to start server', { error: error.message });
+    process.exit(1);
+  }
+}
+
+// Start the server
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

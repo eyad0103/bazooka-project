@@ -1,7 +1,7 @@
 {
-  "name": "bazooka-project",
-  "version": "1.0.0",
-  "description": "A Node.js web service for bazooka-project",
+  "name": "bazooka-monitoring-backend",
+  "version": "2.0.0",
+  "description": "Modular PC monitoring system backend with AI integration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,37 +9,28 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "node",
+    "pc-monitoring",
+    "ai",
+    "openrouter",
     "express",
-    "web-service"
+    "modular"
   ],
-  "author": "eyad0103",
+  "author": "Bazooka Monitoring System",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
     "cors": "^2.8.6",
     "dotenv": "^16.3.1",
     "express": "^4.22.1",
+    "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "mongodb": "^6.3.0",
-    "uuid": "^13.0.0",
-    "ws": "^8.14.2",
-    "winston": "^3.11.0",
-    "express-rate-limit": "^7.1.5",
-    "helmet-csp": "^3.4.0"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/eyad0103/bazooka-project.git"
-  },
-  "bugs": {
-    "url": "https://github.com/eyad0103/bazooka-project/issues"
-  },
-  "homepage": "https://github.com/eyad0103/bazooka-project#readme"
+  }
 }

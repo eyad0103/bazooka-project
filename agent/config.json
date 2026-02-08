@@ -1,0 +1,17 @@
+{
+  "pcId": "",
+  "serverUrl": "http://localhost:3000",
+  "heartbeatInterval": 30000,
+  "errorCheckInterval": 5000,
+  "systemInfoInterval": 60000,
+  "logging": {
+    "level": "info",
+    "maxFileSize": "10MB",
+    "maxFiles": 5
+  },
+  "features": {
+    "autoStart": false,
+    "minimizeToTray": true,
+    "startWithSystem": false
+  }
+}

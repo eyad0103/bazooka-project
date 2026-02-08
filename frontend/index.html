@@ -1,147 +1,386 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bazooka PC Monitoring</title>
-  <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bazooka PC Monitoring System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <h1>🚀 Bazooka PC Monitoring</h1>
-    <div class="status-bar">
-      <span id="last-update">Last Update: --</span>
-      <span id="connection-status">🟢 Connected</span>
-    </div>
-  </header>
-  
-  <nav>
-    <button data-tab="dashboard" class="active">Dashboard</button>
-    <button data-tab="errors">Errors</button>
-    <button data-tab="apps">Apps</button>
-    <button data-tab="settings">Settings</button>
-  </nav>
-  
-  <main>
-    <!-- Dashboard Tab -->
-    <div id="dashboard" class="tab-content active">
-      <section class="registration-panel">
-        <h2>Register New PC</h2>
-        <div class="registration-form">
-          <input type="text" id="pc-name" placeholder="Enter PC name..." maxlength="50">
-          <button id="register-btn">Register PC</button>
-        </div>
-        <div id="registration-result" class="result-message"></div>
-      </section>
-      
-      <section class="stats-overview">
-        <div class="stat-card">
-          <h3>Total PCs</h3>
-          <span id="total-pcs">0</span>
-        </div>
-        <div class="stat-card">
-          <h3>Online</h3>
-          <span id="online-pcs">0</span>
-        </div>
-        <div class="stat-card">
-          <h3>Offline</h3>
-          <span id="offline-pcs">0</span>
-        </div>
-        <div class="stat-card">
-          <h3>Errors</h3>
-          <span id="error-count">0</span>
-        </div>
-      </section>
-      
-      <section class="pcs-grid">
-        <h2>Registered PCs</h2>
-        <div id="pcs-container">
-          <!-- PC cards will be dynamically inserted here -->
-        </div>
-      </section>
-    </div>
-    
-    <!-- Errors Tab -->
-    <div id="errors" class="tab-content">
-      <section class="errors-section">
-        <h2>System Errors</h2>
-        <div class="error-controls">
-          <select id="error-filter">
-            <option value="all">All Errors</option>
-            <option value="critical">Critical</option>
-            <option value="warning">Warning</option>
-            <option value="info">Info</option>
-          </select>
-          <button id="clear-errors">Clear All</button>
-        </div>
-        <div id="errors-container">
-          <!-- Errors will be dynamically inserted here -->
-        </div>
-      </section>
-    </div>
-    
-    <!-- Apps Tab -->
-    <div id="apps" class="tab-content">
-      <section class="apps-section">
-        <h2>Applications</h2>
-        <div class="app-controls">
-          <select id="pc-filter">
-            <option value="all">All PCs</option>
-          </select>
-        </div>
-        <div id="apps-container">
-          <!-- Apps will be dynamically inserted here -->
-        </div>
-      </section>
-    </div>
-    
-    <!-- Settings Tab -->
-    <div id="settings" class="tab-content">
-      <section class="settings-section">
-        <h2>System Settings</h2>
-        <div class="settings-grid">
-          <div class="setting-card">
-            <h3>Monitoring Settings</h3>
-            <div class="setting-item">
-              <label for="refresh-rate">Refresh Rate (seconds)</label>
-              <input type="number" id="refresh-rate" value="2" min="1" max="60">
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-desktop"></i>
+                    Bazooka PC Monitoring
+                </h1>
+                <div class="header-status">
+                    <span id="connection-status" class="status-indicator offline">
+                        <i class="fas fa-circle"></i>
+                        <span>Offline</span>
+                    </span>
+                </div>
             </div>
-            <div class="setting-item">
-              <label for="alert-threshold">Alert Threshold</label>
-              <select id="alert-threshold">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
-              </select>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+            </button>
+            <button class="nav-btn" data-tab="errors">
+                <i class="fas fa-exclamation-triangle"></i>
+                Errors
+            </button>
+            <button class="nav-btn" data-tab="ai-chat">
+                <i class="fas fa-robot"></i>
+                AI Chat
+            </button>
+            <button class="nav-btn" data-tab="api-key">
+                <i class="fas fa-key"></i>
+                API Key
+            </button>
+            <button class="nav-btn" data-tab="pc-management">
+                <i class="fas fa-cog"></i>
+                PC Management
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="tab-header">
+                    <h2>PC Dashboard</h2>
+                    <button id="refresh-dashboard" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                </div>
+                
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-desktop"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-pcs">0</h3>
+                            <p>Total PCs</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon online">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="online-pcs">0</h3>
+                            <p>Online</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon offline">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="offline-pcs">0</h3>
+                            <p>Offline</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="recent-errors">0</h3>
+                            <p>Recent Errors</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pc-list">
+                    <h3>Registered PCs</h3>
+                    <div id="pc-table-container">
+                        <table class="pc-table">
+                            <thead>
+                                <tr>
+                                    <th>PC Name</th>
+                                    <th>Status</th>
+                                    <th>Last Seen</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pc-table-body">
+                                <tr>
+                                    <td colspan="4" class="no-data">No PCs registered yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-          </div>
-          
-          <div class="setting-card">
-            <h3>Display Settings</h3>
-            <div class="setting-item">
-              <label for="theme">Theme</label>
-              <select id="theme">
-                <option value="futuristic" selected>Futuristic</option>
-                <option value="classic">Classic</option>
-                <option value="dark">Dark</option>
-              </select>
+
+            <!-- Errors Tab -->
+            <div id="errors-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Error Log</h2>
+                    <div class="tab-controls">
+                        <select id="error-filter-pc" class="form-control">
+                            <option value="">All PCs</option>
+                        </select>
+                        <select id="error-filter-severity" class="form-control">
+                            <option value="">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <button id="refresh-errors" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="error-list">
+                    <div id="error-table-container">
+                        <table class="error-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>PC</th>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Message</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="error-table-body">
+                                <tr>
+                                    <td colspan="6" class="no-data">No errors reported</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="setting-item">
-              <label for="animations">Animations</label>
-              <input type="checkbox" id="animations" checked>
+
+            <!-- AI Chat Tab -->
+            <div id="ai-chat-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>AI Assistant</h2>
+                    <div id="ai-status" class="ai-status">
+                        <span class="status-indicator">
+                            <i class="fas fa-circle"></i>
+                            <span>Checking...</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="welcome-message">
+                            <div class="message ai-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <p>Hello! I'm your PC monitoring AI assistant. I can help you:</p>
+                                    <ul>
+                                        <li>Explain errors and provide troubleshooting steps</li>
+                                        <li>Analyze system performance and suggest optimizations</li>
+                                        <li>Answer questions about your PC monitoring setup</li>
+                                        <li>Provide guidance on system maintenance</li>
+                                    </ul>
+                                    <p>Feel free to ask me anything about your PC monitoring system!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="chat-input" class="chat-input" placeholder="Ask me about your PC monitoring system...">
+                            <button id="send-message" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="chat-options">
+                            <button id="clear-chat" class="btn btn-secondary">
+                                <i class="fas fa-trash"></i>
+                                Clear Chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="settings-actions">
-          <button id="save-settings" class="save-btn">Save Settings</button>
-          <button id="reset-settings" class="reset-btn">Reset to Default</button>
-        </div>
-      </section>
+
+            <!-- API Key Tab -->
+            <div id="api-key-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>API Key Settings</h2>
+                </div>
+
+                <div class="api-key-section">
+                    <div class="form-section">
+                        <h3>OpenRouter API Key</h3>
+                        <p class="form-description">
+                            Enter your OpenRouter API key to enable AI-powered error explanations and chat functionality.
+                            Your API key is encrypted and stored securely on the server.
+                        </p>
+
+                        <div class="form-group">
+                            <label for="api-key-input">API Key</label>
+                            <div class="input-group">
+                                <input type="password" id="api-key-input" class="form-control" placeholder="sk-or-v1-...">
+                                <button id="toggle-key-visibility" class="btn btn-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="api-key-description">Description (Optional)</label>
+                            <input type="text" id="api-key-description" class="form-control" placeholder="e.g., Main OpenRouter API Key">
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="save-api-key" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Save API Key
+                            </button>
+                            <button id="test-api-key" class="btn btn-secondary">
+                                <i class="fas fa-check"></i>
+                                Test Key
+                            </button>
+                            <button id="delete-api-key" class="btn btn-danger">
+                                <i class="fas fa-trash"></i>
+                                Delete Key
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="api-key-status" id="api-key-status">
+                        <h3>Current Status</h3>
+                        <div id="api-key-info" class="status-info">
+                            <p>No API key configured</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC Management Tab -->
+            <div id="pc-management-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>PC Management</h2>
+                </div>
+
+                <div class="pc-management-section">
+                    <div class="form-section">
+                        <h3>Rename PC</h3>
+                        <p class="form-description">
+                            Select a PC and enter a new display name. PCs are automatically registered by agents.
+                        </p>
+
+                        <div class="form-group">
+                            <label for="rename-pc-select">Select PC</label>
+                            <select id="rename-pc-select" class="form-control">
+                                <option value="">Select a PC...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="new-pc-name">New Display Name</label>
+                            <input type="text" id="new-pc-name" class="form-control" placeholder="Enter new PC name">
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="rename-pc" class="btn btn-primary">
+                                <i class="fas fa-edit"></i>
+                                Rename PC
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h3>PC Registration Info</h3>
+                        <div class="info-card">
+                            <h4><i class="fas fa-info-circle"></i> How PCs are registered</h4>
+                            <p>PCs are automatically registered when the Bazooka Agent is run on a PC. You cannot manually create PCs from this dashboard.</p>
+                            
+                            <h4><i class="fas fa-download"></i> Deploy Agent</h4>
+                            <p>Download the agent files and run them on any PC you want to monitor:</p>
+                            <ul>
+                                <li>Copy the entire <code>agent</code> folder to the target PC</li>
+                                <li>Run <code>run-agent.bat</code> (Windows) or <code>run-agent.command</code> (macOS/Linux)</li>
+                                <li>The PC will automatically appear in your dashboard</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2026 Bazooka PC Monitoring System v2.0.0</p>
+        </footer>
     </div>
-  </main>
-  
-  <script src="app.js"></script>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Error Detail Modal -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Error Details</h3>
+                <button class="modal-close" id="close-error-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="error-detail-content">
+                    <!-- Error details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="get-ai-explanation" class="btn btn-primary">
+                    <i class="fas fa-robot"></i>
+                    Get AI Explanation
+                </button>
+                <button id="resolve-error" class="btn btn-success">
+                    <i class="fas fa-check"></i>
+                    Mark Resolved
+                </button>
+                <button class="btn btn-secondary" onclick="closeErrorModal()">
+                    <i class="fas fa-times"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/errors.js"></script>
+    <script src="js/aiChat.js"></script>
+    <script src="js/apiKey.js"></script>
+    <script src="js/pcManagement.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
