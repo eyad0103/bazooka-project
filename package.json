@@ -1,0 +1,40 @@
+{
+  "name": "bazooka-project",
+  "version": "1.0.0",
+  "description": "A Node.js web service for bazooka-project",
+  "main": "backend/index.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "build": "cd backend && npm install",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "node",
+    "express",
+    "web-service"
+  ],
+  "author": "eyad0103",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.22.1",
+    "helmet": "^7.1.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eyad0103/bazooka-project.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eyad0103/bazooka-project/issues"
+  },
+  "homepage": "https://github.com/eyad0103/bazooka-project#readme"
+}
