@@ -4,13 +4,78 @@ class BazookaMonitor {
   constructor() {
     this.baseURL = window.location.origin;
     this.refreshInterval = 5000; // 5 seconds
+    this.currentTab = 'dashboard';
     this.init();
   }
 
   async init() {
+    this.setupTabNavigation();
     await this.loadDashboard();
     this.startAutoRefresh();
     this.updateLastUpdateTime();
+  }
+
+  // Tab Navigation
+  setupTabNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const tabSlider = document.querySelector('.tab-slider');
+
+    tabButtons.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        const targetTab = button.getAttribute('data-tab');
+        this.switchTab(targetTab, button, tabSlider);
+      });
+    });
+
+    // Initialize slider position
+    this.updateSliderPosition(document.querySelector('.tab-btn.active'), tabSlider);
+  }
+
+  switchTab(tabName, activeButton, slider) {
+    // Update button states
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    activeButton.classList.add('active');
+
+    // Update content visibility
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+
+    // Update slider position
+    this.updateSliderPosition(activeButton, slider);
+
+    // Update current tab
+    this.currentTab = tabName;
+
+    // Load tab-specific content
+    this.loadTabContent(tabName);
+  }
+
+  updateSliderPosition(activeButton, slider) {
+    if (slider && activeButton) {
+      const buttonRect = activeButton.getBoundingClientRect();
+      const navRect = activeButton.parentElement.getBoundingClientRect();
+      
+      slider.style.width = `${buttonRect.width}px`;
+      slider.style.left = `${buttonRect.left - navRect.left}px`;
+    }
+  }
+
+  loadTabContent(tabName) {
+    switch(tabName) {
+      case 'dashboard':
+        this.loadDashboard();
+        break;
+      case 'errors':
+        this.refreshErrors();
+        break;
+      case 'apps':
+        this.loadApps();
+        break;
+      case 'settings':
+        this.loadSettings();
+        break;
+    }
   }
 
   // API Calls
@@ -71,8 +136,16 @@ class BazookaMonitor {
     resultDiv.className = `result-message ${type}`;
     resultDiv.style.display = 'block';
 
+    // Add animation class
+    if (type === 'success') {
+      resultDiv.classList.add('success-flash');
+    } else if (type === 'error') {
+      resultDiv.classList.add('error-shake');
+    }
+
     setTimeout(() => {
       resultDiv.style.display = 'none';
+      resultDiv.classList.remove('success-flash', 'error-shake');
     }, 5000);
   }
 
@@ -172,9 +245,101 @@ class BazookaMonitor {
     document.getElementById('error-count').textContent = recentErrors;
   }
 
+  // Load Apps Content
+  loadApps() {
+    // Simulate loading apps data
+    const appsContainer = document.querySelector('.apps-grid');
+    if (appsContainer) {
+      // Add loading animation
+      appsContainer.classList.add('loading');
+      
+      setTimeout(() => {
+        appsContainer.classList.remove('loading');
+        // Apps are already in HTML, just add some dynamic behavior
+        this.addAppInteractivity();
+      }, 1000);
+    }
+  }
+
+  addAppInteractivity() {
+    const appCards = document.querySelectorAll('.app-card');
+    appCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const appName = card.querySelector('.app-name').textContent;
+        const status = card.querySelector('.app-status').textContent;
+        this.showResult(`App "${appName}" is ${status}`, 'success');
+      });
+    });
+  }
+
+  // Load Settings Content
+  loadSettings() {
+    const saveBtn = document.querySelector('.save-btn');
+    const resetBtn = document.querySelector('.reset-btn');
+
+    if (saveBtn && !saveBtn.hasAttribute('data-listener')) {
+      saveBtn.setAttribute('data-listener', 'true');
+      saveBtn.addEventListener('click', () => this.saveSettings());
+    }
+
+    if (resetBtn && !resetBtn.hasAttribute('data-listener')) {
+      resetBtn.setAttribute('data-listener', 'true');
+      resetBtn.addEventListener('click', () => this.resetSettings());
+    }
+  }
+
+  saveSettings() {
+    const refreshRate = document.getElementById('refresh-rate').value;
+    const alertThreshold = document.getElementById('alert-threshold').value;
+    const theme = document.getElementById('theme').value;
+    const animations = document.getElementById('animations').checked;
+
+    // Save settings (in real app, this would be saved to backend/localStorage)
+    const settings = {
+      refreshRate,
+      alertThreshold,
+      theme,
+      animations
+    };
+
+    localStorage.setItem('bazooka-settings', JSON.stringify(settings));
+    this.showResult('Settings saved successfully!', 'success');
+
+    // Apply settings
+    this.applySettings(settings);
+  }
+
+  resetSettings() {
+    // Reset to defaults
+    document.getElementById('refresh-rate').value = '5';
+    document.getElementById('alert-threshold').value = 'medium';
+    document.getElementById('theme').value = 'futuristic';
+    document.getElementById('animations').checked = true;
+
+    localStorage.removeItem('bazooka-settings');
+    this.showResult('Settings reset to default!', 'success');
+  }
+
+  applySettings(settings) {
+    if (settings.refreshRate) {
+      this.refreshInterval = settings.refreshRate * 1000;
+      this.restartAutoRefresh();
+    }
+
+    if (settings.animations !== undefined) {
+      document.body.style.setProperty('--animations-enabled', settings.animations ? '1' : '0');
+    }
+  }
+
+  restartAutoRefresh() {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+    }
+    this.startAutoRefresh();
+  }
   // Auto Refresh
   startAutoRefresh() {
-    setInterval(() => {
+    this.refreshTimer = setInterval(() => {
       this.loadDashboard();
       this.updateLastUpdateTime();
     }, this.refreshInterval);
@@ -204,6 +369,38 @@ class BazookaMonitor {
   filterErrors() {
     this.loadDashboard();
   }
+
+  // Load saved settings on startup
+  loadSavedSettings() {
+    const savedSettings = localStorage.getItem('bazooka-settings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        
+        // Apply settings to form
+        if (settings.refreshRate) {
+          document.getElementById('refresh-rate').value = settings.refreshRate;
+          this.refreshInterval = settings.refreshRate * 1000;
+        }
+        
+        if (settings.alertThreshold) {
+          document.getElementById('alert-threshold').value = settings.alertThreshold;
+        }
+        
+        if (settings.theme) {
+          document.getElementById('theme').value = settings.theme;
+        }
+        
+        if (settings.animations !== undefined) {
+          document.getElementById('animations').checked = settings.animations;
+        }
+        
+        this.applySettings(settings);
+      } catch (error) {
+        console.error('Failed to load saved settings:', error);
+      }
+    }
+  }
 }
 
 // Global Functions for HTML onclick handlers
@@ -225,10 +422,33 @@ function filterErrors() {
 document.addEventListener('DOMContentLoaded', () => {
   monitor = new BazookaMonitor();
   
+  // Load saved settings
+  monitor.loadSavedSettings();
+  
   // Add enter key support for registration
   document.getElementById('pc-name').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       registerPC();
+    }
+  });
+
+  // Handle window resize for tab slider
+  window.addEventListener('resize', () => {
+    const activeButton = document.querySelector('.tab-btn.active');
+    const slider = document.querySelector('.tab-slider');
+    if (activeButton && slider) {
+      monitor.updateSliderPosition(activeButton, slider);
+    }
+  });
+
+  // Add keyboard navigation for tabs
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key >= '1' && e.key <= '4') {
+      const tabIndex = parseInt(e.key) - 1;
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      if (tabButtons[tabIndex]) {
+        tabButtons[tabIndex].click();
+      }
     }
   });
 });
