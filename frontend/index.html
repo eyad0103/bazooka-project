@@ -23,6 +23,7 @@
             <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
             <button class="tab-btn" data-tab="errors">Errors</button>
             <button class="tab-btn" data-tab="apps">Apps</button>
+            <button class="tab-btn" data-tab="ai-chat">AI Chat</button>
             <button class="tab-btn" data-tab="settings">Settings</button>
         </nav>
 
@@ -103,6 +104,45 @@
                     </div>
                     <div id="apps-container" class="apps-grid">
                         <!-- Apps will be dynamically inserted here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div class="tab-content" id="ai-chat-tab">
+                <section class="ai-chat-section">
+                    <h2>AI Assistant</h2>
+                    <div class="ai-chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="welcome-message">
+                                <div class="ai-avatar">🤖</div>
+                                <div class="message-content">
+                                    <p>Hello! I'm your Bazooka PC Monitoring AI assistant. I can help you:</p>
+                                    <ul>
+                                        <li>Analyze system performance and metrics</li>
+                                        <li>Troubleshoot PC issues and errors</li>
+                                        <li>Provide optimization recommendations</li>
+                                        <li>Explain monitoring data and trends</li>
+                                    </ul>
+                                    <p>Feel free to ask me anything about your PC monitoring data!</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-container">
+                            <div class="input-group">
+                                <input type="text" id="chat-input" placeholder="Ask me about your PC monitoring data..." maxlength="500">
+                                <button id="send-message" class="send-btn">
+                                    <span class="send-icon">➤</span>
+                                </button>
+                            </div>
+                            <div class="chat-controls">
+                                <button id="clear-chat" class="clear-btn">Clear Chat</button>
+                                <button id="export-chat" class="export-btn">Export</button>
+                                <div class="typing-indicator" id="typing-indicator">
+                                    <span class="typing-dots">...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </div>

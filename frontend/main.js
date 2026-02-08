@@ -72,6 +72,9 @@ class BazookaMonitor {
       case 'apps':
         this.loadApps();
         break;
+      case 'ai-chat':
+        this.loadAIChat();
+        break;
       case 'settings':
         this.loadSettings();
         break;
@@ -287,7 +290,339 @@ class BazookaMonitor {
     document.getElementById('error-count').textContent = recentErrors;
   }
 
-  // Load Apps Content
+  // Load AI Chat Content
+  loadAIChat() {
+    this.setupAIChat();
+    this.loadChatHistory();
+  }
+
+  setupAIChat() {
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-message');
+    const clearBtn = document.getElementById('clear-chat');
+    const exportBtn = document.getElementById('export-chat');
+    
+    if (sendBtn && !sendBtn.hasAttribute('data-listener')) {
+      sendBtn.setAttribute('data-listener', 'true');
+      sendBtn.addEventListener('click', () => this.sendAIMessage());
+    }
+    
+    if (chatInput && !chatInput.hasAttribute('data-listener')) {
+      chatInput.setAttribute('data-listener', 'true');
+      chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.sendAIMessage();
+        }
+      });
+    }
+    
+    if (clearBtn && !clearBtn.hasAttribute('data-listener')) {
+      clearBtn.setAttribute('data-listener', 'true');
+      clearBtn.addEventListener('click', () => this.clearChat());
+    }
+    
+    if (exportBtn && !exportBtn.hasAttribute('data-listener')) {
+      exportBtn.setAttribute('data-listener', 'true');
+      exportBtn.addEventListener('click', () => this.exportChat());
+    }
+    
+    // Initialize WebSocket for real-time updates
+    this.initWebSocket();
+  }
+
+  initWebSocket() {
+    if (this.ws) {
+      this.ws.close();
+    }
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+    
+    this.ws = new WebSocket(wsUrl);
+    
+    this.ws.onopen = () => {
+      console.log('WebSocket connected');
+      // Subscribe to real-time updates
+      this.ws.send(JSON.stringify({
+        type: 'subscribe',
+        subscriptions: ['heartbeat', 'error-reported', 'apps-updated', 'ai-chat']
+      }));
+    };
+    
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.handleWebSocketMessage(data);
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    };
+    
+    this.ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      // Attempt to reconnect after 3 seconds
+      setTimeout(() => this.initWebSocket(), 3000);
+    };
+    
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  }
+
+  handleWebSocketMessage(data) {
+    switch (data.type) {
+      case 'heartbeat':
+        // Update PC in real-time
+        this.updatePCInRealTime(data.data);
+        break;
+      case 'error-reported':
+        // Add new error in real-time
+        this.addErrorInRealTime(data.data);
+        break;
+      case 'apps-updated':
+        // Update apps in real-time
+        this.updateAppsInRealTime(data.data);
+        break;
+      case 'ai-chat':
+        // Add AI messages in real-time
+        this.addAIMessagesInRealTime(data.data);
+        break;
+    }
+  }
+
+  updatePCInRealTime(pcData) {
+    // Update PC card in dashboard if visible
+    const pcCard = document.querySelector(`[data-pc-id="${pcData.pcId}"]`);
+    if (pcCard) {
+      // Update metrics
+      const cpuElement = pcCard.querySelector('.metric-value');
+      const memoryElement = pcCard.querySelectorAll('.metric-value')[1];
+      const statusElement = pcCard.querySelector('.pc-status');
+      
+      if (cpuElement) cpuElement.textContent = `${pcData.cpu}%`;
+      if (memoryElement) memoryElement.textContent = `${pcData.memory}%`;
+      if (statusElement) {
+        statusElement.textContent = pcData.status;
+        statusElement.className = `pc-status ${pcData.status.toLowerCase().replace('_', '')}`;
+      }
+    }
+  }
+
+  addErrorInRealTime(errorData) {
+    // Add error to errors tab if visible
+    if (this.currentTab === 'errors') {
+      this.addErrorToDisplay(errorData.error);
+    }
+  }
+
+  updateAppsInRealTime(appsData) {
+    // Update apps tab if visible
+    if (this.currentTab === 'apps') {
+      this.refreshApps();
+    }
+  }
+
+  addAIMessagesInRealTime(chatData) {
+    // Add AI messages to chat if visible
+    if (this.currentTab === 'ai-chat') {
+      chatData.messages.forEach(msg => {
+        this.addMessageToChat(msg);
+      });
+    }
+  }
+
+  async sendAIMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-message');
+    const message = chatInput.value.trim();
+    
+    if (!message) return;
+    
+    // Disable input and button
+    chatInput.disabled = true;
+    sendBtn.disabled = true;
+    
+    // Show typing indicator
+    this.showTypingIndicator(true);
+    
+    // Add user message to chat
+    this.addMessageToChat({
+      type: 'user',
+      message: message,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Get current PC data for context
+      const pcsData = await this.apiCall('/pcs');
+      const errorsData = await this.apiCall('/errors');
+      
+      const context = {
+        pcs: pcsData.pcs,
+        errors: errorsData.errors.slice(0, 5), // Last 5 errors
+        timestamp: new Date().toISOString()
+      };
+      
+      const response = await this.apiCall('/api/ai-chat', 'POST', {
+        message: message,
+        sessionId: 'default',
+        context: context
+      });
+      
+      // Add AI response to chat
+      this.addMessageToChat({
+        type: 'assistant',
+        message: response.message,
+        timestamp: response.timestamp,
+        model: response.model
+      });
+      
+      // Clear input
+      chatInput.value = '';
+      
+    } catch (error) {
+      console.error('AI Chat error:', error);
+      this.addMessageToChat({
+        type: 'error',
+        message: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      // Re-enable input and button
+      chatInput.disabled = false;
+      sendBtn.disabled = false;
+      
+      // Hide typing indicator
+      this.showTypingIndicator(false);
+      
+      // Focus input
+      chatInput.focus();
+    }
+  }
+
+  addMessageToChat(message) {
+    const chatMessages = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${message.type}`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = message.type === 'user' ? '👤' : '🤖';
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.innerHTML = `<p>${message.message}</p>`;
+    
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(content);
+    
+    // Remove welcome message if it exists
+    const welcomeMessage = chatMessages.querySelector('.welcome-message');
+    if (welcomeMessage) {
+      welcomeMessage.remove();
+    }
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  showTypingIndicator(show) {
+    const indicator = document.getElementById('typing-indicator');
+    if (show) {
+      indicator.classList.add('active');
+    } else {
+      indicator.classList.remove('active');
+    }
+  }
+
+  async loadChatHistory() {
+    try {
+      const response = await this.apiCall('/api/ai-chat/default');
+      const messages = response.messages;
+      
+      const chatMessages = document.getElementById('chat-messages');
+      
+      // Clear existing messages except welcome
+      const welcomeMessage = chatMessages.querySelector('.welcome-message');
+      chatMessages.innerHTML = '';
+      
+      if (welcomeMessage) {
+        chatMessages.appendChild(welcomeMessage);
+      }
+      
+      // Add historical messages
+      messages.forEach(msg => {
+        this.addMessageToChat(msg);
+      });
+      
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  }
+
+  async clearChat() {
+    try {
+      await this.apiCall('/api/ai-chat/default', 'DELETE');
+      
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
+      
+      // Add welcome message back
+      const welcomeMessage = document.createElement('div');
+      welcomeMessage.className = 'welcome-message';
+      welcomeMessage.innerHTML = `
+        <div class="ai-avatar">🤖</div>
+        <div class="message-content">
+          <p>Hello! I'm your Bazooka PC Monitoring AI assistant. I can help you:</p>
+          <ul>
+            <li>Analyze system performance and metrics</li>
+            <li>Troubleshoot PC issues and errors</li>
+            <li>Provide optimization recommendations</li>
+            <li>Explain monitoring data and trends</li>
+          </ul>
+          <p>Feel free to ask me anything about your PC monitoring data!</p>
+        </div>
+      `;
+      chatMessages.appendChild(welcomeMessage);
+      
+      this.showResult('Chat history cleared', 'success');
+      
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      this.showResult('Failed to clear chat', 'error');
+    }
+  }
+
+  async exportChat() {
+    try {
+      const response = await this.apiCall('/api/ai-chat/default');
+      const messages = response.messages;
+      
+      const chatText = messages.map(msg => 
+        `[${msg.type.toUpperCase()}] ${new Date(msg.timestamp).toLocaleString()}\n${msg.message}`
+      ).join('\n\n');
+      
+      // Create download
+      const blob = new Blob([chatText], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bazooka-ai-chat-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      this.showResult('Chat exported successfully', 'success');
+      
+    } catch (error) {
+      console.error('Failed to export chat:', error);
+      this.showResult('Failed to export chat', 'error');
+    }
+  }
   async loadApps() {
     try {
       await this.refreshApps();
@@ -712,6 +1047,18 @@ function filterApps() {
   monitor.filterApps();
 }
 
+function sendAIMessage() {
+  monitor.sendAIMessage();
+}
+
+function clearChat() {
+  monitor.clearChat();
+}
+
+function exportChat() {
+  monitor.exportChat();
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   monitor = new BazookaMonitor();
@@ -737,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard navigation for tabs
   document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key >= '1' && e.key <= '4') {
+    if (e.altKey && e.key >= '1' && e.key <= '5') {
       const tabIndex = parseInt(e.key) - 1;
       const tabButtons = document.querySelectorAll('.tab-btn');
       if (tabButtons[tabIndex]) {
@@ -759,6 +1106,21 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       if (monitor.currentTab === 'settings') {
         monitor.resetSettings();
+      }
+    }
+    
+    // AI Chat shortcuts
+    if (e.ctrlKey && e.key === 'k') {
+      e.preventDefault();
+      if (monitor.currentTab === 'ai-chat') {
+        document.getElementById('chat-input').focus();
+      }
+    }
+    
+    if (e.ctrlKey && e.key === 'l') {
+      e.preventDefault();
+      if (monitor.currentTab === 'ai-chat') {
+        monitor.clearChat();
       }
     }
   });

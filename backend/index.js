@@ -6,10 +6,19 @@ require('dotenv').config();
 
 // Database setup
 const { MongoClient, ObjectId } = require('mongodb');
+const WebSocket = require('ws');
+const http = require('http');
+const axios = require('axios');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bazooka-monitoring';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+// WebSocket setup
+const wss = new WebSocket.Server({ server });
+const clients = new Map(); // Connected WebSocket clients
 
 // Database connection
 let db;
@@ -17,6 +26,7 @@ let pcsCollection;
 let errorsCollection;
 let appsCollection;
 let settingsCollection;
+let aiChatCollection;
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -30,6 +40,7 @@ async function initializeDatabase() {
     errorsCollection = db.collection('errors');
     appsCollection = db.collection('apps');
     settingsCollection = db.collection('settings');
+    aiChatCollection = db.collection('ai-chat');
     
     // Create indexes for performance
     await pcsCollection.createIndex({ apiKey: 1 }, { unique: true });
@@ -38,6 +49,8 @@ async function initializeDatabase() {
     await errorsCollection.createIndex({ pcId: 1 });
     await appsCollection.createIndex({ pcId: 1 });
     await appsCollection.createIndex({ lastUpdated: -1 });
+    await aiChatCollection.createIndex({ timestamp: -1 });
+    await aiChatCollection.createIndex({ sessionId: 1 });
     
     console.log('✅ Database connected successfully');
   } catch (error) {
@@ -57,10 +70,240 @@ app.use((req, res, next) => {
   next();
 });
 
-// In-memory cache for performance (fallback)
-const pcsCache = new Map();
-const errorsCache = new Map();
-const appsCache = new Map();
+// WebSocket connection handling
+wss.on('connection', (ws) => {
+  const clientId = uuidv4();
+  clients.set(clientId, {
+    ws: ws,
+    connected: new Date(),
+    lastPing: new Date()
+  });
+  
+  console.log(`🔌 WebSocket client connected: ${clientId}`);
+  
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'connected',
+    clientId: clientId,
+    timestamp: new Date().toISOString()
+  }));
+  
+  // Handle messages from clients
+  ws.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message);
+      await handleWebSocketMessage(clientId, data);
+    } catch (error) {
+      console.error('WebSocket message error:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid message format'
+      }));
+    }
+  });
+  
+  // Handle disconnection
+  ws.on('close', () => {
+    clients.delete(clientId);
+    console.log(`🔌 WebSocket client disconnected: ${clientId}`);
+  });
+  
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error(`WebSocket error for client ${clientId}:`, error);
+    clients.delete(clientId);
+  });
+});
+
+// Handle WebSocket messages
+async function handleWebSocketMessage(clientId, data) {
+  const client = clients.get(clientId);
+  if (!client) return;
+  
+  switch (data.type) {
+    case 'ping':
+      client.lastPing = new Date();
+      client.ws.send(JSON.stringify({
+        type: 'pong',
+        timestamp: new Date().toISOString()
+      }));
+      break;
+      
+    case 'subscribe':
+      // Subscribe to real-time updates
+      client.subscriptions = data.subscriptions || [];
+      client.ws.send(JSON.stringify({
+        type: 'subscribed',
+        subscriptions: client.subscriptions
+      }));
+      break;
+      
+    case 'ai-chat':
+      await handleAIChatMessage(clientId, data);
+      break;
+  }
+}
+
+// Broadcast real-time updates to all connected clients
+function broadcastUpdate(type, data) {
+  const message = JSON.stringify({
+    type: type,
+    data: data,
+    timestamp: new Date().toISOString()
+  });
+  
+  clients.forEach((client, clientId) => {
+    if (client.ws.readyState === WebSocket.OPEN) {
+      // Check if client is subscribed to this type of update
+      if (!client.subscriptions || client.subscriptions.includes(type)) {
+        client.ws.send(message);
+      }
+    }
+  });
+}
+
+// AI Chat endpoint
+app.post('/api/ai-chat', async (req, res) => {
+  const { message, sessionId, context } = req.body;
+  
+  if (!OPENROUTER_API_KEY) {
+    return res.status(500).json({ 
+      error: 'OpenRouter API key not configured',
+      message: 'Please set OPENROUTER_API_KEY environment variable'
+    });
+  }
+  
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+  
+  try {
+    // Store user message
+    const userMessage = {
+      _id: new ObjectId(),
+      sessionId: sessionId || 'default',
+      type: 'user',
+      message: message,
+      context: context || null,
+      timestamp: new Date()
+    };
+    
+    await aiChatCollection.insertOne(userMessage);
+    
+    // Get conversation history for context
+    const history = await aiChatCollection
+      .find({ sessionId: sessionId || 'default' })
+      .sort({ timestamp: 1 })
+      .limit(10)
+      .toArray();
+    
+    // Prepare messages for OpenRouter
+    const messages = [
+      {
+        role: 'system',
+        content: `You are an AI assistant for the Bazooka PC Monitoring System. You help users understand their PC monitoring data, troubleshoot issues, and provide insights about system performance. Be helpful, concise, and technical. Current context: ${JSON.stringify(context || {})}\n\nRecent conversation history:\n${history.map(h => `${h.type}: ${h.message}`).join('\n')}`
+      },
+      ...history.filter(h => h.type === 'user' || h.type === 'assistant').slice(-5).map(h => ({
+        role: h.type === 'user' ? 'user' : 'assistant',
+        content: h.message
+      })),
+      {
+        role: 'user',
+        content: message
+      }
+    ];
+    
+    // Call OpenRouter API
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'anthropic/claude-3-haiku',
+      messages: messages,
+      max_tokens: 1000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://bazooka-project-1.onrender.com',
+        'X-Title': 'Bazooka PC Monitoring System'
+      }
+    });
+    
+    const aiResponse = response.data.choices[0].message.content;
+    
+    // Store AI response
+    const assistantMessage = {
+      _id: new ObjectId(),
+      sessionId: sessionId || 'default',
+      type: 'assistant',
+      message: aiResponse,
+      model: response.data.model,
+      timestamp: new Date()
+    };
+    
+    await aiChatCollection.insertOne(assistantMessage);
+    
+    // Broadcast update if subscribed
+    broadcastUpdate('ai-chat', {
+      sessionId: sessionId || 'default',
+      messages: [userMessage, assistantMessage]
+    });
+    
+    res.json({
+      message: aiResponse,
+      sessionId: sessionId || 'default',
+      model: response.data.model,
+      timestamp: assistantMessage.timestamp
+    });
+    
+  } catch (error) {
+    console.error('AI Chat error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process AI chat',
+      message: error.message 
+    });
+  }
+});
+
+// Get AI chat history
+app.get('/api/ai-chat/:sessionId?', async (req, res) => {
+  const sessionId = req.params.sessionId || 'default';
+  const limit = parseInt(req.query.limit) || 50;
+  
+  try {
+    const messages = await aiChatCollection
+      .find({ sessionId: sessionId })
+      .sort({ timestamp: 1 })
+      .limit(limit)
+      .toArray();
+    
+    res.json({
+      sessionId: sessionId,
+      messages: messages,
+      total: await aiChatCollection.countDocuments({ sessionId: sessionId })
+    });
+  } catch (error) {
+    console.error('Error fetching AI chat history:', error);
+    res.status(500).json({ error: 'Failed to fetch chat history' });
+  }
+});
+
+// Clear AI chat history
+app.delete('/api/ai-chat/:sessionId?', async (req, res) => {
+  const sessionId = req.params.sessionId || 'default';
+  
+  try {
+    const result = await aiChatCollection.deleteMany({ sessionId: sessionId });
+    
+    res.json({
+      message: 'Chat history cleared',
+      sessionId: sessionId,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error clearing AI chat history:', error);
+    res.status(500).json({ error: 'Failed to clear chat history' });
+  }
+});
 
 // Routes
 app.get('/', (req, res) => {
@@ -82,8 +325,18 @@ app.get('/api', (req, res) => {
       'GET /pcs',
       'POST /apps-status',
       'GET /apps-status',
-      'GET /api/settings',
-      'POST /api/settings'
+      'GET/POST /api/settings',
+      'POST /api/ai-chat',
+      'GET /api/ai-chat',
+      'DELETE /api/ai-chat',
+      'WebSocket: /ws'
+    ],
+    features: [
+      'Real-time PC Monitoring',
+      'AI Chat Assistant',
+      'WebSocket Updates',
+      'MongoDB Storage',
+      'Cross-platform Agents'
     ]
   });
 });
@@ -124,6 +377,19 @@ app.post('/register-pc', async (req, res) => {
     pcsCache.set(apiKey, pcData);
     
     console.log(`✅ PC registered: ${pcName} (${pcId})`);
+    
+    // Broadcast new PC to all connected clients
+    broadcastUpdate('pc-registered', {
+      pc: {
+        id: pcId,
+        name: pcName,
+        status: 'ONLINE',
+        cpu: 0,
+        memory: 0,
+        registrationDate: pcData.registrationDate,
+        lastHeartbeat: pcData.lastHeartbeat
+      }
+    });
     
     res.status(201).json({
       message: 'PC registered successfully',
@@ -178,6 +444,16 @@ app.post('/heartbeat', async (req, res) => {
     
     console.log(`💓 Heartbeat received for PC: ${apiKey}`);
     
+    // Broadcast heartbeat update to all connected clients
+    broadcastUpdate('heartbeat', {
+      pcId: pc.id,
+      status: updateData.status,
+      cpu: updateData.cpu,
+      memory: updateData.memory,
+      lastHeartbeat: updateData.lastHeartbeat,
+      uptime: updateData.uptime
+    });
+    
     res.json({
       message: 'Heartbeat received successfully',
       timestamp: updateData.lastHeartbeat,
@@ -219,6 +495,19 @@ app.post('/report-error', async (req, res) => {
     await errorsCollection.insertOne(errorData);
     
     console.log(`⚠️ Error reported for PC ${pc.name}: ${errorType} - ${message}`);
+    
+    // Broadcast new error to all connected clients
+    broadcastUpdate('error-reported', {
+      error: {
+        id: errorData._id.toString(),
+        pcId: pc.id,
+        pcName: pc.name,
+        type: errorData.type,
+        message: errorData.message,
+        timestamp: errorData.timestamp,
+        details: errorData.details
+      }
+    });
     
     res.status(201).json({
       message: 'Error reported successfully',
@@ -332,6 +621,14 @@ app.post('/apps-status', async (req, res) => {
     
     console.log(`📱 Apps updated for PC ${pc.name}: ${appDocuments.length} applications`);
     
+    // Broadcast apps update to all connected clients
+    broadcastUpdate('apps-updated', {
+      pcId: pc.id,
+      pcName: pc.name,
+      apps: appDocuments,
+      timestamp: timestamp
+    });
+    
     res.json({
       message: 'Application status updated successfully',
       pcName: pc.name,
@@ -441,11 +738,13 @@ async function startServer() {
   try {
     await initializeDatabase();
     
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Bazooka PC Monitoring Backend started on port ${PORT}`);
       console.log(`📊 Dashboard: http://localhost:${PORT}`);
       console.log(`🔗 API: http://localhost:${PORT}/api`);
-      console.log(`💾 Database: Connected`);
+      console.log(`� WebSocket: ws://localhost:${PORT}`);
+      console.log(`�💾 Database: Connected`);
+      console.log(`🤖 AI Chat: ${OPENROUTER_API_KEY ? 'Configured' : 'Not configured'}`);
       console.log(`⏰ Started at: ${new Date().toISOString()}`);
     });
   } catch (error) {
