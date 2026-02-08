@@ -2,7 +2,7 @@
   "name": "bazooka-project",
   "version": "1.0.0",
   "description": "A Node.js web service for bazooka-project",
-  "main": "backend/index.js",
+  "main": "backend/server.js",
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "cd backend && npm run dev",
