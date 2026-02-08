@@ -9,6 +9,11 @@ const pcsRoutes = require('./routes/pcs');
 const heartbeatRoutes = require('./routes/heartbeat');
 const errorsRoutes = require('./routes/errors');
 const appsRoutes = require('./routes/apps');
+const aiChatRoutes = require('./routes/ai-chat');
+const apiKeysRoutes = require('./routes/api-keys');
+
+// Initialize shared storage
+apiKeysRoutes.setPcsStorage(pcsRoutes.pcsStorage);
 
 const app = express();
 
@@ -28,6 +33,8 @@ app.use('/pcs', pcsRoutes);
 app.use('/heartbeat', heartbeatRoutes);
 app.use('/errors', errorsRoutes);
 app.use('/apps-status', appsRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
+app.use('/api/keys', apiKeysRoutes.router);
 
 // Serve frontend
 app.get('/', (req, res) => {
@@ -48,13 +55,23 @@ app.get('/api', (req, res) => {
       'POST /errors',
       'GET /errors',
       'POST /apps-status',
-      'GET /apps-status'
+      'GET /apps-status',
+      'POST /api/ai-chat',
+      'GET /api/ai-chat',
+      'DELETE /api/ai-chat',
+      'GET /api/keys',
+      'POST /api/keys/regenerate',
+      'POST /api/keys/revoke',
+      'GET /api/keys/audit',
+      'GET /api/keys/export'
     ],
     features: [
       'Real-time PC Monitoring',
       'Heartbeat Tracking',
       'Error Reporting',
       'Application Monitoring',
+      'AI Chat Assistant',
+      'API Key Management',
       'Futuristic Dashboard'
     ]
   });

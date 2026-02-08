@@ -5,6 +5,9 @@ const PC = require('../models/PC');
 // In-memory storage (replace with database in production)
 const pcs = new Map();
 
+// Export storage for other routes
+module.exports.pcsStorage = pcs;
+
 // Register a new PC
 router.post('/', async (req, res) => {
   const { name } = req.body;

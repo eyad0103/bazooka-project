@@ -50,6 +50,12 @@ class BazookaMonitor {
       case 'apps':
         this.loadApps();
         break;
+      case 'ai-chat':
+        this.loadAIChat();
+        break;
+      case 'api-keys':
+        this.loadAPIKeys();
+        break;
       case 'settings':
         this.loadSettings();
         break;
@@ -71,13 +77,28 @@ class BazookaMonitor {
     // App controls
     document.getElementById('pc-filter').addEventListener('change', () => this.filterApps());
 
+    // AI Chat controls
+    document.getElementById('send-message').addEventListener('click', () => this.sendAIMessage());
+    document.getElementById('chat-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.sendAIMessage();
+      }
+    });
+    document.getElementById('clear-chat').addEventListener('click', () => this.clearChat());
+    document.getElementById('export-chat').addEventListener('click', () => this.exportChat());
+
+    // API Keys controls
+    document.getElementById('refresh-keys').addEventListener('click', () => this.refreshAPIKeys());
+    document.getElementById('export-keys').addEventListener('click', () => this.exportAPIKeys());
+
     // Settings
     document.getElementById('save-settings').addEventListener('click', () => this.saveSettings());
     document.getElementById('reset-settings').addEventListener('click', () => this.resetSettings());
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      if (e.altKey && e.key >= '1' && e.key <= '4') {
+      if (e.altKey && e.key >= '1' && e.key <= '6') {
         const tabIndex = parseInt(e.key) - 1;
         const tabButtons = document.querySelectorAll('nav button');
         if (tabButtons[tabIndex]) {
@@ -362,7 +383,306 @@ class BazookaMonitor {
     });
   }
 
-  // Settings handling
+  // AI Chat functionality
+  async loadAIChat() {
+    this.setupAIChat();
+    this.loadChatHistory();
+  }
+
+  setupAIChat() {
+    // AI Chat is already set up in event listeners
+  }
+
+  async sendAIMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-message');
+    const message = chatInput.value.trim();
+    
+    if (!message) return;
+    
+    // Disable input and button
+    chatInput.disabled = true;
+    sendBtn.disabled = true;
+    
+    // Show typing indicator
+    this.showTypingIndicator(true);
+    
+    // Add user message to chat
+    this.addMessageToChat({
+      type: 'user',
+      message: message,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Get current PC data for context
+      const pcsData = await this.apiCall('/pcs');
+      const errorsData = await this.apiCall('/errors');
+      
+      const context = {
+        pcs: pcsData.pcs,
+        errors: errorsData.errors.slice(0, 5), // Last 5 errors
+        timestamp: new Date().toISOString()
+      };
+      
+      const response = await this.apiCall('/api/ai-chat', 'POST', {
+        message: message,
+        sessionId: 'default',
+        context: context
+      });
+      
+      // Add AI response to chat
+      this.addMessageToChat({
+        type: 'assistant',
+        message: response.message,
+        timestamp: response.timestamp,
+        model: response.model
+      });
+      
+      // Clear input
+      chatInput.value = '';
+      
+    } catch (error) {
+      console.error('AI Chat error:', error);
+      this.addMessageToChat({
+        type: 'error',
+        message: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      // Re-enable input and button
+      chatInput.disabled = false;
+      sendBtn.disabled = false;
+      
+      // Hide typing indicator
+      this.showTypingIndicator(false);
+      
+      // Focus input
+      chatInput.focus();
+    }
+  }
+
+  addMessageToChat(message) {
+    const chatMessages = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${message.type}`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = message.type === 'user' ? '👤' : '🤖';
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.innerHTML = `<p>${message.message}</p>`;
+    
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(content);
+    
+    // Remove welcome message if it exists
+    const welcomeMessage = chatMessages.querySelector('.welcome-message');
+    if (welcomeMessage) {
+      welcomeMessage.remove();
+    }
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  showTypingIndicator(show) {
+    const indicator = document.getElementById('typing-indicator');
+    if (show) {
+      indicator.classList.add('active');
+    } else {
+      indicator.classList.remove('active');
+    }
+  }
+
+  async loadChatHistory() {
+    try {
+      const response = await this.apiCall('/api/ai-chat/default');
+      const messages = response.messages;
+      
+      const chatMessages = document.getElementById('chat-messages');
+      
+      // Clear existing messages except welcome
+      const welcomeMessage = chatMessages.querySelector('.welcome-message');
+      chatMessages.innerHTML = '';
+      
+      if (welcomeMessage) {
+        chatMessages.appendChild(welcomeMessage);
+      }
+      
+      // Add historical messages
+      messages.forEach(msg => {
+        this.addMessageToChat(msg);
+      });
+      
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  }
+
+  async clearChat() {
+    try {
+      await this.apiCall('/api/ai-chat/default', 'DELETE');
+      
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
+      
+      // Add welcome message back
+      const welcomeMessage = document.createElement('div');
+      welcomeMessage.className = 'welcome-message';
+      welcomeMessage.innerHTML = `
+        <div class="ai-avatar">🤖</div>
+        <div class="message-content">
+          <p>Hello! I'm your Bazooka PC Monitoring AI assistant. I can help you:</p>
+          <ul>
+            <li>Analyze system performance and metrics</li>
+            <li>Troubleshoot PC issues and errors</li>
+            <li>Provide optimization recommendations</li>
+            <li>Explain monitoring data and trends</li>
+          </ul>
+          <p>Feel free to ask me anything about your PC monitoring data!</p>
+        </div>
+      `;
+      chatMessages.appendChild(welcomeMessage);
+      
+      this.showResult('Chat history cleared', 'success');
+      
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      this.showResult('Failed to clear chat', 'error');
+    }
+  }
+
+  async exportChat() {
+    try {
+      const response = await this.apiCall('/api/ai-chat/default');
+      const messages = response.messages;
+      
+      const chatText = messages.map(msg => 
+        `[${msg.type.toUpperCase()}] ${new Date(msg.timestamp).toLocaleString()}\n${msg.message}`
+      ).join('\n\n');
+      
+      // Create download
+      const blob = new Blob([chatText], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bazooka-ai-chat-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      this.showResult('Chat exported successfully', 'success');
+      
+    } catch (error) {
+      console.error('Failed to export chat:', error);
+      this.showResult('Failed to export chat', 'error');
+    }
+  }
+
+  // API Keys functionality
+  async loadAPIKeys() {
+    await this.refreshAPIKeys();
+  }
+
+  async refreshAPIKeys() {
+    try {
+      const response = await this.apiCall('/api/keys');
+      this.updateAPIKeysDisplay(response.keys);
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+    }
+  }
+
+  updateAPIKeysDisplay(keys) {
+    const tbody = document.getElementById('api-keys-tbody');
+    tbody.innerHTML = '';
+    
+    if (keys.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No API keys found</td></tr>';
+      return;
+    }
+    
+    keys.forEach(pc => {
+      const row = document.createElement('tr');
+      
+      const statusClass = pc.status.toLowerCase().replace('_', '');
+      const lastHeartbeat = pc.lastHeartbeat ? new Date(pc.lastHeartbeat).toLocaleString() : 'Never';
+      const registrationDate = pc.registrationDate ? new Date(pc.registrationDate).toLocaleString() : 'Unknown';
+      
+      row.innerHTML = `
+        <td>${pc.name}</td>
+        <td><span class="api-key-cell" title="${pc.apiKey}">${pc.apiKey}</span></td>
+        <td><span class="status-indicator ${statusClass}">${pc.status}</span></td>
+        <td>${lastHeartbeat}</td>
+        <td>${registrationDate}</td>
+        <td>
+          <div class="api-key-actions">
+            <button class="action-btn copy-btn" onclick="monitor.copyAPIKey('${pc.apiKey}')" title="Copy API Key">Copy</button>
+            <button class="action-btn regenerate-btn" onclick="monitor.regenerateAPIKey('${pc.id}')" title="Regenerate Key">Regenerate</button>
+            <button class="action-btn revoke-btn" onclick="monitor.revokeAPIKey('${pc.id}')" title="Revoke Key">Revoke</button>
+          </div>
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+  }
+
+  async copyAPIKey(apiKey) {
+    try {
+      await navigator.clipboard.writeText(apiKey);
+      this.showResult('API key copied to clipboard', 'success');
+    } catch (error) {
+      console.error('Failed to copy API key:', error);
+      this.showResult('Failed to copy API key', 'error');
+    }
+  }
+
+  async regenerateAPIKey(pcId) {
+    if (!confirm('Are you sure you want to regenerate this API key? This will invalidate the old key.')) {
+      return;
+    }
+    
+    try {
+      const response = await this.apiCall('/api/keys/regenerate', 'POST', { pcId });
+      this.showResult(`API key regenerated for ${response.pcName}`, 'success');
+      await this.refreshAPIKeys();
+    } catch (error) {
+      console.error('Failed to regenerate API key:', error);
+      this.showResult('Failed to regenerate API key', 'error');
+    }
+  }
+
+  async revokeAPIKey(pcId) {
+    if (!confirm('Are you sure you want to revoke this API key? This will permanently disable access for this PC.')) {
+      return;
+    }
+    
+    try {
+      const response = await this.apiCall('/api/keys/revoke', 'POST', { pcId });
+      this.showResult(`API key revoked for ${response.pcName}`, 'success');
+      await this.refreshAPIKeys();
+      await this.loadDashboard(); // Refresh dashboard to show updated status
+    } catch (error) {
+      console.error('Failed to revoke API key:', error);
+      this.showResult('Failed to revoke API key', 'error');
+    }
+  }
+
+  async exportAPIKeys() {
+    try {
+      window.open('/api/keys/export', '_blank');
+    } catch (error) {
+      console.error('Failed to export API keys:', error);
+      this.showResult('Failed to export API keys', 'error');
+    }
+  }
   loadSettings() {
     // Load saved settings from localStorage
     const savedSettings = localStorage.getItem('bazooka-settings');
@@ -442,6 +762,26 @@ function refreshApps() {
 
 function filterApps() {
   monitor.filterApps();
+}
+
+function sendAIMessage() {
+  monitor.sendAIMessage();
+}
+
+function clearChat() {
+  monitor.clearChat();
+}
+
+function exportChat() {
+  monitor.exportChat();
+}
+
+function refreshAPIKeys() {
+  monitor.refreshAPIKeys();
+}
+
+function exportAPIKeys() {
+  monitor.exportAPIKeys();
 }
 
 function saveSettings() {
