@@ -21,6 +21,20 @@ if [ ! -f "agent.js" ]; then
     exit 1
 fi
 
+# Check and install dependencies
+echo "Checking dependencies..."
+if [ ! -d "node_modules" ]; then
+    echo "Installing dependencies..."
+    npm install
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to install dependencies"
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+else
+    echo "Dependencies already installed"
+fi
+
 # Create logs directory if it doesn't exist
 if [ ! -d "logs" ]; then
     mkdir logs
@@ -33,11 +47,11 @@ node agent.js
 
 # Check if agent exited with error
 if [ $? -ne 0 ]; then
-    echo
-    echo "Agent exited with error"
+    echo ""
+    echo "Agent exited with error code $?"
     echo "Check the logs directory for details"
 else
-    echo
+    echo ""
     echo "Agent stopped successfully"
 fi
 

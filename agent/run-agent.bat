@@ -20,6 +20,20 @@ if not exist "agent.js" (
     exit /b 1
 )
 
+REM Check and install dependencies
+echo Checking dependencies...
+if not exist "node_modules" (
+    echo Installing dependencies...
+    npm install
+    if %errorlevel% neq 0 (
+        echo Error: Failed to install dependencies
+        pause
+        exit /b 1
+    )
+) else (
+    echo Dependencies already installed
+)
+
 REM Create logs directory if it doesn't exist
 if not exist "logs" (
     mkdir logs
