@@ -99,17 +99,17 @@ class APIKeyController {
     
     const key = keyInput.value.trim();
     const description = descriptionInput.value.trim();
-
+    
     if (!key) {
       showToast('API key is required', 'warning');
       return;
     }
-
+    
     if (!key.startsWith('sk-or-')) {
       showToast('Invalid API key format. Key should start with "sk-or-"', 'error');
       return;
     }
-
+    
     try {
       showLoading();
       const response = await api.saveAPIKey(key, description);
@@ -117,10 +117,9 @@ class APIKeyController {
       if (response.success) {
         showToast('API key saved successfully', 'success');
         
-        // Only clear input if save was successful and user wants to clear it
-        // Keep the key visible for debugging/testing purposes
-        // keyInput.value = '';
-        // descriptionInput.value = '';
+        // Clear input by default for security, but allow user to keep it visible
+        keyInput.value = '';
+        descriptionInput.value = '';
         
         await this.loadAPIKeyStatus();
         
