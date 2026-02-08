@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAZOOKA PC MONITORING SYSTEM</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🚀 BAZOOKA PC MONITORING SYSTEM</h1>
+            <div class="status-bar">
+                <span id="system-status" class="status-indicator online">SYSTEM ONLINE</span>
+                <span id="last-update">Last Update: --</span>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <div class="tab-slider"></div>
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="errors">Errors</button>
+            <button class="tab-btn" data-tab="apps">Apps</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-content active" id="dashboard-tab">
+                <!-- Registration Section -->
+                <section class="registration-panel">
+                    <h2>Register New PC</h2>
+                    <div class="registration-form">
+                        <input type="text" id="pc-name" placeholder="Enter PC Name" maxlength="50">
+                        <button id="register-btn" onclick="registerPC()">Register PC</button>
+                    </div>
+                    <div id="registration-result" class="result-message"></div>
+                </section>
+
+                <!-- PCs Overview -->
+                <section class="pcs-overview">
+                    <h2>PC Status Overview</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="total-pcs">0</div>
+                            <div class="stat-label">Total PCs</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number online" id="online-pcs">0</div>
+                            <div class="stat-label">Online</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number offline" id="offline-pcs">0</div>
+                            <div class="stat-label">Offline</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number warning" id="error-count">0</div>
+                            <div class="stat-label">Recent Errors</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PC Cards Grid -->
+                <section class="pcs-grid">
+                    <h2>PC Details</h2>
+                    <div id="pcs-container" class="pc-cards-grid">
+                        <!-- PC cards will be dynamically inserted here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Errors Tab -->
+            <div class="tab-content" id="errors-tab">
+                <section class="errors-section">
+                    <h2>Recent Errors</h2>
+                    <div class="error-controls">
+                        <button onclick="refreshErrors()">Refresh Errors</button>
+                        <select id="error-filter" onchange="filterErrors()">
+                            <option value="all">All Errors</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="INFO">Info</option>
+                        </select>
+                    </div>
+                    <div id="errors-container" class="errors-list">
+                        <!-- Errors will be dynamically inserted here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Apps Tab -->
+            <div class="tab-content" id="apps-tab">
+                <section class="apps-section">
+                    <h2>Applications Monitor</h2>
+                    <div class="apps-grid">
+                        <div class="app-card">
+                            <div class="app-icon">🌐</div>
+                            <div class="app-name">Web Browser</div>
+                            <div class="app-status online">Running</div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-icon">💻</div>
+                            <div class="app-name">Code Editor</div>
+                            <div class="app-status online">Running</div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-icon">🎮</div>
+                            <div class="app-name">Games</div>
+                            <div class="app-status offline">Stopped</div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-icon">📊</div>
+                            <div class="app-name">Analytics</div>
+                            <div class="app-status waiting">Loading</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <section class="settings-section">
+                    <h2>System Settings</h2>
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <h3>Monitoring Settings</h3>
+                            <div class="setting-item">
+                                <label for="refresh-rate">Refresh Rate (seconds)</label>
+                                <input type="number" id="refresh-rate" value="5" min="1" max="60">
+                            </div>
+                            <div class="setting-item">
+                                <label for="alert-threshold">Alert Threshold</label>
+                                <select id="alert-threshold">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-card">
+                            <h3>Display Settings</h3>
+                            <div class="setting-item">
+                                <label for="theme">Theme</label>
+                                <select id="theme">
+                                    <option value="futuristic" selected>Futuristic</option>
+                                    <option value="classic">Classic</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="animations">Animations</label>
+                                <input type="checkbox" id="animations" checked>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="save-btn">Save Settings</button>
+                        <button class="reset-btn">Reset to Default</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
