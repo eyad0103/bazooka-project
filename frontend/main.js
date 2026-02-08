@@ -5,18 +5,13 @@ class BazookaMonitor {
     this.baseURL = window.location.origin;
     this.currentTab = 'dashboard';
     this.refreshInterval = 5000; // 5 seconds
-    this.demoMode = true; // Enable demo mode
-    this.demoData = this.generateDemoData();
+    this.refreshTimer = null;
     this.init();
   }
 
   async init() {
     this.setupTabNavigation();
-    if (this.demoMode) {
-      this.loadDemoDashboard();
-    } else {
-      await this.loadDashboard();
-    }
+    await this.loadDashboard();
     this.startAutoRefresh();
     this.updateLastUpdateTime();
   }
@@ -69,11 +64,7 @@ class BazookaMonitor {
   loadTabContent(tabName) {
     switch(tabName) {
       case 'dashboard':
-        if (this.demoMode) {
-          this.loadDemoDashboard();
-        } else {
-          this.loadDashboard();
-        }
+        this.loadDashboard();
         break;
       case 'errors':
         this.refreshErrors();
@@ -87,151 +78,8 @@ class BazookaMonitor {
     }
   }
 
-  // Generate demo data
-  generateDemoData() {
-    return {
-      pcs: [
-        {
-          id: 'pc-1',
-          name: 'GAMING-RIG',
-          status: 'ONLINE',
-          cpu: 45,
-          memory: 62,
-          lastHeartbeat: new Date().toISOString(),
-          registrationDate: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: 'pc-2', 
-          name: 'WORKSTATION-01',
-          status: 'ONLINE',
-          cpu: 78,
-          memory: 85,
-          lastHeartbeat: new Date().toISOString(),
-          registrationDate: '2024-01-16T14:30:00Z'
-        },
-        {
-          id: 'pc-3',
-          name: 'SERVER-NODE',
-          status: 'WAITING',
-          cpu: 12,
-          memory: 34,
-          lastHeartbeat: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-          registrationDate: '2024-01-14T09:15:00Z'
-        },
-        {
-          id: 'pc-4',
-          name: 'DEV-MACHINE',
-          status: 'OFFLINE',
-          cpu: 0,
-          memory: 0,
-          lastHeartbeat: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-          registrationDate: '2024-01-13T16:45:00Z'
-        }
-      ],
-      errors: [
-        {
-          id: 'error-1',
-          pcId: 'pc-2',
-          pcName: 'WORKSTATION-01',
-          type: 'WARNING',
-          message: 'High CPU usage detected (85%)',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'error-2',
-          pcId: 'pc-3',
-          pcName: 'SERVER-NODE',
-          type: 'INFO',
-          message: 'Service restarted successfully',
-          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'error-3',
-          pcId: 'pc-4',
-          pcName: 'DEV-MACHINE',
-          type: 'CRITICAL',
-          message: 'Connection timeout after 30 seconds',
-          timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString()
-        }
-      ],
-      apps: [
-        {
-          id: 'app-1',
-          pcId: 'pc-1',
-          pcName: 'GAMING-RIG',
-          name: 'Steam',
-          status: 'RUNNING',
-          version: '2.4.0',
-          memoryUsage: '2.1 GB',
-          cpuUsage: '15%',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          id: 'app-2',
-          pcId: 'pc-1',
-          pcName: 'GAMING-RIG',
-          name: 'Discord',
-          status: 'RUNNING',
-          version: '1.0.9',
-          memoryUsage: '512 MB',
-          cpuUsage: '3%',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          id: 'app-3',
-          pcId: 'pc-2',
-          pcName: 'WORKSTATION-01',
-          name: 'Visual Studio Code',
-          status: 'RUNNING',
-          version: '1.85.0',
-          memoryUsage: '1.8 GB',
-          cpuUsage: '12%',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          id: 'app-4',
-          pcId: 'pc-2',
-          pcName: 'WORKSTATION-01',
-          name: 'Chrome',
-          status: 'NOT_RESPONDING',
-          version: '120.0.6099',
-          memoryUsage: '3.2 GB',
-          cpuUsage: '25%',
-          lastUpdated: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'app-5',
-          pcId: 'pc-3',
-          pcName: 'SERVER-NODE',
-          name: 'Docker Desktop',
-          status: 'RUNNING',
-          version: '4.26.1',
-          memoryUsage: '1.2 GB',
-          cpuUsage: '8%',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          id: 'app-6',
-          pcId: 'pc-4',
-          pcName: 'DEV-MACHINE',
-          name: 'Node.js',
-          status: 'STOPPED',
-          version: '20.10.0',
-          memoryUsage: '0 MB',
-          cpuUsage: '0%',
-          lastUpdated: new Date(Date.now() - 30 * 60 * 1000).toISOString()
-        }
-      ]
-    };
-  }
-
   // API Calls
   async apiCall(endpoint, method = 'GET', data = null) {
-    // In demo mode, return mock data
-    if (this.demoMode) {
-      return this.getMockData(endpoint);
-    }
-
     try {
       const options = {
         method,
@@ -257,20 +105,6 @@ class BazookaMonitor {
     }
   }
 
-  // Mock data provider for demo mode
-  getMockData(endpoint) {
-    switch(endpoint) {
-      case '/pcs':
-        return { pcs: this.demoData.pcs, total: this.demoData.pcs.length };
-      case '/errors':
-        return { errors: this.demoData.errors, total: this.demoData.errors.length };
-      case '/apps-status':
-        return { apps: this.demoData.apps, total: this.demoData.apps.length };
-      default:
-        return { message: 'Demo mode active' };
-    }
-  }
-
   // Registration
   async registerPC() {
     const pcNameInput = document.getElementById('pc-name');
@@ -285,26 +119,10 @@ class BazookaMonitor {
     try {
       const response = await this.apiCall('/register-pc', 'POST', { pcName });
       
-      // Add to demo data if in demo mode
-      if (this.demoMode) {
-        this.demoData.pcs.push({
-          id: response.apiKey.substring(0, 8),
-          name: pcName,
-          status: 'ONLINE',
-          cpu: Math.floor(Math.random() * 60),
-          memory: Math.floor(Math.random() * 60),
-          lastHeartbeat: new Date().toISOString(),
-          registrationDate: new Date().toISOString()
-        });
-        this.loadDemoDashboard();
-      }
-
       this.showResult(`PC "${pcName}" registered successfully! API Key: ${response.apiKey}`, 'success');
       pcNameInput.value = '';
       
-      if (!this.demoMode) {
-        await this.loadDashboard();
-      }
+      await this.loadDashboard();
     } catch (error) {
       this.showResult('Failed to register PC', 'error');
     }
@@ -327,13 +145,6 @@ class BazookaMonitor {
       resultDiv.style.display = 'none';
       resultDiv.classList.remove('success-flash', 'error-shake');
     }, 5000);
-  }
-
-  // Load demo dashboard
-  loadDemoDashboard() {
-    this.updateStats(this.demoData.pcs, this.demoData.errors);
-    this.updatePCDisplay(this.demoData.pcs);
-    this.updateLastUpdateTime();
   }
 
   // Load Dashboard Data
@@ -788,25 +599,8 @@ class BazookaMonitor {
   // Auto Refresh
   startAutoRefresh() {
     this.refreshTimer = setInterval(() => {
-      if (this.demoMode) {
-        // Simulate data changes in demo mode
-        this.simulateDataChanges();
-        this.loadDemoDashboard();
-      } else {
-        this.loadDashboard();
-      }
+      this.loadDashboard();
     }, this.refreshInterval);
-  }
-
-  simulateDataChanges() {
-    // Randomly update PC metrics
-    this.demoData.pcs.forEach(pc => {
-      if (pc.status === 'ONLINE') {
-        pc.cpu = Math.max(10, Math.min(95, pc.cpu + Math.floor(Math.random() * 21) - 10));
-        pc.memory = Math.max(10, Math.min(95, pc.memory + Math.floor(Math.random() * 21) - 10));
-        pc.lastHeartbeat = new Date().toISOString();
-      }
-    });
   }
 
   updateLastUpdateTime() {
