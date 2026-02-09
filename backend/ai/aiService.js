@@ -80,6 +80,24 @@ class AIService {
     }
   }
 
+  async getApiKeyStatus() {
+    try {
+      const status = await this.isApiKeyConfigured();
+      
+      return {
+        success: true,
+        ...status
+      };
+    } catch (error) {
+      logger.error('Failed to get API key status', { error: error.message });
+      return {
+        success: false,
+        configured: false,
+        error: error.message
+      };
+    }
+  }
+
   async chatWithAI(message, context = null) {
     try {
       const apiKeyData = await apiKeyStore.getApiKey();

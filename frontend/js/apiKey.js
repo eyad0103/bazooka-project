@@ -55,7 +55,7 @@ class ApiKeySettingsComponent {
       
       // Call actual API to save the key
       const response = await api.post('/api/settings/api-key', {
-        apiKey: apiKey,
+        key: apiKey,
         description: description
       });
       
@@ -93,8 +93,8 @@ class ApiKeySettingsComponent {
       showLoading();
       
       // Call actual API to test the key
-      const response = await api.post('/api/settings/test-api-key', {
-        apiKey: apiKey
+      const response = await api.post('/api/settings/api-key/test', {
+        key: apiKey
       });
       
       if (response.success) {

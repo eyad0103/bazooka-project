@@ -69,4 +69,20 @@ router.delete('/api-key', async (req, res) => {
   }
 });
 
+// GET /api/settings/api-key-status - Get API key status
+router.get('/api-key-status', async (req, res) => {
+  try {
+    const result = await aiService.getApiKeyStatus();
+    
+    res.json(result);
+
+  } catch (error) {
+    logger.error('Failed to get API key status', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get API key status'
+    });
+  }
+});
+
 module.exports = router;
