@@ -15,24 +15,31 @@ class BazookaMonitoringApp {
   }
 
   initializeControllers() {
-    // Initialize all tab controllers
-    this.controllers.dashboard = new DashboardController();
-    this.controllers.errors = new ErrorsController();
-    
-    // Initialize new AI components (loaded via script tags)
-    this.controllers.aiChat = new AiChatComponent();
-    this.controllers.apiKey = new ApiKeySettingsComponent();
-    this.controllers.pcManagement = new PCManagementController();
+    try {
+      // Initialize all tab controllers
+      this.controllers.dashboard = new DashboardController();
+      this.controllers.errors = new ErrorsController();
+      
+      // Initialize new AI components (loaded via script tags)
+      this.controllers.aiChat = new AiChatComponent();
+      this.controllers.apiKey = new ApiKeySettingsComponent();
+      this.controllers.pcManagement = new PCManagementController();
 
-    // Start AI status monitoring
-    aiStatusStore.startPeriodicCheck();
+      // Start AI status monitoring if available
+      if (window.aiStatusStore) {
+        window.aiStatusStore.startPeriodicCheck();
+      }
 
-    // Make them globally available
-    window.dashboard = this.controllers.dashboard;
-    window.errors = this.controllers.errors;
-    window.aiChat = this.controllers.aiChat;
-    window.apiKey = this.controllers.apiKey;
-    window.pcManagement = this.controllers.pcManagement;
+      // Make them globally available
+      window.dashboard = this.controllers.dashboard;
+      window.errors = this.controllers.errors;
+      window.aiChat = this.controllers.aiChat;
+      window.apiKey = this.controllers.apiKey;
+      window.pcManagement = this.controllers.pcManagement;
+    } catch (error) {
+      console.error('Error initializing controllers:', error);
+      // Continue with basic functionality even if controllers fail
+    }
   }
 
   bindEvents() {
@@ -81,22 +88,32 @@ class BazookaMonitoringApp {
   }
 
   showTab(tabName) {
-    // Update navigation
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    try {
+      // Update navigation
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      const activeNavBtn = document.querySelector(`[data-tab="${tabName}"]`);
+      if (activeNavBtn) {
+        activeNavBtn.classList.add('active');
+      }
 
-    // Update content
-    document.querySelectorAll('.tab-content').forEach(content => {
-      content.classList.remove('active');
-    });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      const activeTabContent = document.getElementById(`${tabName}-tab`);
+      if (activeTabContent) {
+        activeTabContent.classList.add('active');
+      }
 
-    this.currentTab = tabName;
+      this.currentTab = tabName;
 
-    // Initialize tab-specific functionality
-    this.initializeTab(tabName);
+      // Initialize tab-specific functionality
+      this.initializeTab(tabName);
+    } catch (error) {
+      console.error('Error switching tab:', error);
+    }
   }
 
   initializeTab(tabName) {

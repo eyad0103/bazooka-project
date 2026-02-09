@@ -99,4 +99,5 @@ class AIStatusStore {
 }
 
 // Make available globally
-window.aiStatusStore = new AIStatusStore();
+const aiStatusStore = new AIStatusStore();
+window.aiStatusStore = aiStatusStore;

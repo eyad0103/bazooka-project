@@ -8,15 +8,22 @@ class DashboardController {
   }
 
   init() {
-    this.bindEvents();
-    this.loadDashboard();
-    this.startAutoRefresh();
+    try {
+      this.bindEvents();
+      this.loadDashboard();
+      this.startAutoRefresh();
+    } catch (error) {
+      console.error('Error initializing dashboard:', error);
+    }
   }
 
   bindEvents() {
-    document.getElementById('refresh-dashboard').addEventListener('click', () => {
-      this.loadDashboard();
-    });
+    const refreshBtn = document.getElementById('refresh-dashboard');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.loadDashboard();
+      });
+    }
   }
 
   async loadDashboard() {
