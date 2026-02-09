@@ -42,10 +42,24 @@ class AiChatComponent {
     this.addMessage(message, 'user');
     input.value = '';
 
-    // Simulate AI response
-    setTimeout(() => {
-      this.addMessage('This is a placeholder AI response. The AI chat functionality requires backend configuration.', 'ai');
-    }, 1000);
+    // Show typing indicator
+    this.showTypingIndicator();
+
+    try {
+      // Call actual AI API
+      const response = await aiApi.chat(message);
+      
+      if (response.success) {
+        this.addMessage(response.response, 'ai');
+      } else {
+        this.addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+      }
+    } catch (error) {
+      console.error('AI chat error:', error);
+      this.addMessage('AI service is currently unavailable. Please check your API key configuration.', 'ai');
+    } finally {
+      this.hideTypingIndicator();
+    }
   }
 
   addMessage(content, type) {
@@ -83,6 +97,33 @@ class AiChatComponent {
         </div>
       </div>
     `;
+  }
+
+  showTypingIndicator() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message ai-message typing-message';
+    typingDiv.innerHTML = `
+      <div class="message-avatar">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div class="message-content">
+        <div class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    `;
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  hideTypingIndicator() {
+    const typingMessage = document.querySelector('.typing-message');
+    if (typingMessage) {
+      typingMessage.remove();
+    }
   }
 
   destroy() {

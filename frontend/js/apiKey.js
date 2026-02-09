@@ -45,12 +45,33 @@ class ApiKeySettingsComponent {
       return;
     }
 
+    if (!validateApiKey(apiKey)) {
+      this.showToast('Invalid API key format. OpenRouter keys start with "sk-or-v1-"', 'error');
+      return;
+    }
+
     try {
-      // Placeholder for actual API call
-      this.showToast('API key saved successfully (placeholder)', 'success');
-      this.loadApiKeyStatus();
+      showLoading();
+      
+      // Call actual API to save the key
+      const response = await api.post('/api/settings/api-key', {
+        apiKey: apiKey,
+        description: description
+      });
+      
+      if (response.success) {
+        this.showToast('API key saved successfully', 'success');
+        this.loadApiKeyStatus();
+        keyInput.value = '';
+        descriptionInput.value = '';
+      } else {
+        this.showToast(response.error || 'Failed to save API key', 'error');
+      }
     } catch (error) {
+      console.error('Save API key error:', error);
       this.showToast('Failed to save API key', 'error');
+    } finally {
+      hideLoading();
     }
   }
 
@@ -63,11 +84,29 @@ class ApiKeySettingsComponent {
       return;
     }
 
+    if (!validateApiKey(apiKey)) {
+      this.showToast('Invalid API key format. OpenRouter keys start with "sk-or-v1-"', 'error');
+      return;
+    }
+
     try {
-      // Placeholder for actual API test
-      this.showToast('API key test passed (placeholder)', 'success');
+      showLoading();
+      
+      // Call actual API to test the key
+      const response = await api.post('/api/settings/test-api-key', {
+        apiKey: apiKey
+      });
+      
+      if (response.success) {
+        this.showToast('API key test passed! AI features are now available.', 'success');
+      } else {
+        this.showToast(response.error || 'API key test failed', 'error');
+      }
     } catch (error) {
+      console.error('Test API key error:', error);
       this.showToast('API key test failed', 'error');
+    } finally {
+      hideLoading();
     }
   }
 
@@ -77,11 +116,22 @@ class ApiKeySettingsComponent {
     }
 
     try {
-      // Placeholder for actual API call
-      this.showToast('API key deleted successfully (placeholder)', 'success');
-      this.loadApiKeyStatus();
+      showLoading();
+      
+      // Call actual API to delete the key
+      const response = await api.delete('/api/settings/api-key');
+      
+      if (response.success) {
+        this.showToast('API key deleted successfully', 'success');
+        this.loadApiKeyStatus();
+      } else {
+        this.showToast(response.error || 'Failed to delete API key', 'error');
+      }
     } catch (error) {
+      console.error('Delete API key error:', error);
       this.showToast('Failed to delete API key', 'error');
+    } finally {
+      hideLoading();
     }
   }
 
@@ -101,18 +151,51 @@ class ApiKeySettingsComponent {
   async loadApiKeyStatus() {
     const statusInfo = document.getElementById('api-key-info');
     
-    // Placeholder for actual API status
-    statusInfo.innerHTML = `
-      <div class="status-card warning">
-        <div class="status-header">
-          <i class="fas fa-exclamation-triangle"></i>
-          No API Key Configured
+    try {
+      // Call actual API to get status
+      const response = await api.get('/api/settings/api-key-status');
+      
+      if (response.success && response.configured) {
+        statusInfo.innerHTML = `
+          <div class="status-card success">
+            <div class="status-header">
+              <i class="fas fa-check-circle"></i>
+              API Key Configured
+            </div>
+            <div class="status-details">
+              <p><strong>Description:</strong> ${response.description || 'No description'}</p>
+              <p><strong>Created:</strong> ${formatDateTime(response.createdAt)}</p>
+              <p><strong>Last Used:</strong> ${response.lastUsed ? formatDateTime(response.lastUsed) : 'Never'}</p>
+            </div>
+          </div>
+        `;
+      } else {
+        statusInfo.innerHTML = `
+          <div class="status-card warning">
+            <div class="status-header">
+              <i class="fas fa-exclamation-triangle"></i>
+              No API Key Configured
+            </div>
+            <div class="status-details">
+              <p>Please configure an OpenRouter API key to enable AI features.</p>
+            </div>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Load API key status error:', error);
+      statusInfo.innerHTML = `
+        <div class="status-card warning">
+          <div class="status-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            Status Unavailable
+          </div>
+          <div class="status-details">
+            <p>Unable to check API key status.</p>
+          </div>
         </div>
-        <div class="status-details">
-          <p>Please configure an OpenRouter API key to enable AI features.</p>
-        </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   showToast(message, type = 'info') {

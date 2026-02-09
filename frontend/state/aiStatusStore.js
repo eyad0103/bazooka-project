@@ -34,11 +34,7 @@ class AIStatusStore {
   // Update status from backend
   async updateStatus() {
     try {
-      // Placeholder for actual API call
-      // const response = await aiApi.getStatus();
-      
-      // Simulate response for now
-      const response = { success: true, configured: false };
+      const response = await aiApi.getStatus();
       
       if (response.success) {
         this.status = {
