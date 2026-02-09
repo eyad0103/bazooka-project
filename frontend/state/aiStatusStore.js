@@ -1,7 +1,5 @@
 // AI Status Store - ONLY holds backend-derived status
 
-const aiApi = require('../api/aiApi');
-
 class AIStatusStore {
   constructor() {
     this.status = {
@@ -36,7 +34,11 @@ class AIStatusStore {
   // Update status from backend
   async updateStatus() {
     try {
-      const response = await aiApi.getStatus();
+      // Placeholder for actual API call
+      // const response = await aiApi.getStatus();
+      
+      // Simulate response for now
+      const response = { success: true, configured: false };
       
       if (response.success) {
         this.status = {
