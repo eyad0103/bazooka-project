@@ -1,14 +1,16 @@
 const express = require('express');
+const AIController = require('../controllers/ai.controller');
 const router = express.Router();
-const aiController = require('../ai/aiController');
 
-// GET /api/ai/status - Check AI status
-router.get('/status', aiController.getStatus.bind(aiController));
+/**
+ * AI Routes
+ * Handle all AI-related endpoints
+ */
 
 // POST /api/ai/chat - Chat with AI
-router.post('/chat', aiController.chat.bind(aiController));
+router.post('/chat', AIController.chat);
 
-// POST /api/ai/explain-error - Explain an error
-router.post('/explain-error', aiController.explainError.bind(aiController));
+// GET /api/ai/explain/:errorId - Explain error with AI
+router.get('/explain/:errorId', AIController.explainError);
 
 module.exports = router;

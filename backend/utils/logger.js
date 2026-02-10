@@ -1,8 +1,11 @@
-const config = require('../config/serverConfig');
+/**
+ * Simple Logger Utility
+ * Handles application logging
+ */
 
 class Logger {
   constructor() {
-    this.isDevelopment = config.nodeEnv === 'development';
+    this.logLevel = process.env.LOG_LEVEL || 'info';
   }
 
   log(level, message, meta = {}) {
@@ -14,30 +17,25 @@ class Logger {
       ...meta
     };
 
-    if (this.isDevelopment) {
-      console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`, meta);
-    } else {
-      // In production, you might want to use a proper logging service
-      console.log(JSON.stringify(logEntry));
+    console.log(JSON.stringify(logEntry));
+  }
+
+  debug(message, meta) {
+    if (this.logLevel === 'debug') {
+      this.log('debug', message, meta);
     }
   }
 
-  info(message, meta = {}) {
+  info(message, meta) {
     this.log('info', message, meta);
   }
 
-  error(message, meta = {}) {
-    this.log('error', message, meta);
-  }
-
-  warn(message, meta = {}) {
+  warn(message, meta) {
     this.log('warn', message, meta);
   }
 
-  debug(message, meta = {}) {
-    if (this.isDevelopment) {
-      this.log('debug', message, meta);
-    }
+  error(message, meta) {
+    this.log('error', message, meta);
   }
 }
 

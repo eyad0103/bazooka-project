@@ -1,15 +1,21 @@
-const app = require('./app');
-const config = require('./config/config');
-const logger = require('./utils/logger');
+#!/usr/bin/env node
 
 /**
- * Start Server
+ * Bazooka PC Monitoring System - Server Entry Point
+ * Single responsibility: Start the application server
  */
-const server = app.listen(config.server.port, config.server.host, () => {
-  logger.info('Bazooka PC Monitor Server Started', {
-    port: config.server.port,
-    host: config.server.host,
-    environment: process.env.NODE_ENV || 'development'
+
+const app = require('./app');
+const config = require('./config/serverConfig');
+const logger = require('./utils/logger.util');
+
+// Start server
+const server = app.listen(config.port, config.host, () => {
+  logger.info(`🚀 Bazooka PC Monitoring System started`, {
+    port: config.port,
+    host: config.host,
+    environment: config.nodeEnv,
+    pid: process.pid
   });
 });
 
@@ -17,7 +23,7 @@ const server = app.listen(config.server.port, config.server.host, () => {
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
   server.close(() => {
-    logger.info('Server closed');
+    logger.info('Server stopped');
     process.exit(0);
   });
 });
@@ -25,7 +31,7 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
   server.close(() => {
-    logger.info('Server closed');
+    logger.info('Server stopped');
     process.exit(0);
   });
 });
@@ -38,7 +44,7 @@ process.on('uncaughtException', (error) => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Promise Rejection', { reason, promise });
+  logger.error('Unhandled Rejection', { reason, promise });
   process.exit(1);
 });
 
