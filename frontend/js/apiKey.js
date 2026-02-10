@@ -153,7 +153,7 @@ class ApiKeySettingsComponent {
     
     try {
       // Call actual API to get status
-      const response = await api.get('/api/settings/api-key-status');
+      const response = await api.get('/api/settings/api-key');
       
       if (response.success && response.configured) {
         statusInfo.innerHTML = `
@@ -167,8 +167,7 @@ class ApiKeySettingsComponent {
               <p><strong>Created:</strong> ${formatDateTime(response.createdAt)}</p>
               <p><strong>Last Used:</strong> ${response.lastUsed ? formatDateTime(response.lastUsed) : 'Never'}</p>
             </div>
-          </div>
-        `;
+          `;
       } else {
         statusInfo.innerHTML = `
           <div class="status-card warning">
@@ -179,8 +178,7 @@ class ApiKeySettingsComponent {
             <div class="status-details">
               <p>Please configure an OpenRouter API key to enable AI features.</p>
             </div>
-          </div>
-        `;
+          `;
       }
     } catch (error) {
       console.error('Load API key status error:', error);
@@ -188,13 +186,12 @@ class ApiKeySettingsComponent {
         <div class="status-card warning">
           <div class="status-header">
             <i class="fas fa-exclamation-triangle"></i>
-            Status Unavailable
+            No API Key Configured
           </div>
           <div class="status-details">
-            <p>Unable to check API key status.</p>
+            <p>Please configure an OpenRouter API key to enable AI features.</p>
           </div>
-        </div>
-      `;
+        `;
     }
   }
 
