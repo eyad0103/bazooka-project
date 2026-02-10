@@ -27,17 +27,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
-// Routes - Order matters for heartbeat
+// Serve static frontend files
+app.use(express.static(path.resolve(__dirname, '../frontend')));
+
+// API routes (must come before catch-all)
 app.use('/api', healthRoutes);
 app.use('/api/pcs', pcsRoutes);
 app.use('/api/errors', errorsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/settings', settingsRoutes);
 
-// Serve static frontend files
-app.use(express.static(path.resolve(__dirname, '../frontend')));
-
-// Catch-all for SPA
+// Catch-all for SPA (must be last)
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../frontend/index.html'));
 });
