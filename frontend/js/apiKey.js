@@ -53,11 +53,8 @@ class ApiKeySettingsComponent {
     try {
       showLoading();
       
-      // Call actual API to save the key
-      const response = await api.post('/api/settings/api-key', {
-        key: apiKey,
-        description: description
-      });
+      // Call actual API to save key
+      const response = await settingsApi.saveApiKey(apiKey, description);
       
       if (response.success) {
         this.showToast('API key saved successfully', 'success');
@@ -93,9 +90,7 @@ class ApiKeySettingsComponent {
       showLoading();
       
       // Call actual API to test the key
-      const response = await api.post('/api/settings/api-key/test', {
-        key: apiKey
-      });
+      const response = await settingsApi.testApiKey(apiKey);
       
       if (response.success) {
         this.showToast('API key test passed! AI features are now available.', 'success');
@@ -119,7 +114,7 @@ class ApiKeySettingsComponent {
       showLoading();
       
       // Call actual API to delete the key
-      const response = await api.delete('/api/settings/api-key');
+      const response = await settingsApi.deleteApiKey();
       
       if (response.success) {
         this.showToast('API key deleted successfully', 'success');
@@ -153,7 +148,7 @@ class ApiKeySettingsComponent {
     
     try {
       // Call actual API to get status
-      const response = await api.get('/api/settings/api-key');
+      const response = await settingsApi.getApiKeyStatus();
       
       if (response.success && response.configured) {
         statusInfo.innerHTML = `
@@ -222,4 +217,27 @@ class ApiKeySettingsComponent {
   destroy() {
     // Cleanup if needed
   }
+}
+
+// API Key validation function
+function validateApiKey(apiKey) {
+  if (!apiKey || typeof apiKey !== 'string') {
+    return false;
+  }
+  
+  const trimmedKey = apiKey.trim();
+  
+  if (trimmedKey.length < 20) {
+    return false;
+  }
+  
+  if (!trimmedKey.startsWith('sk-or-v1-')) {
+    return false;
+  }
+  
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedKey)) {
+    return false;
+  }
+  
+  return true;
 }
