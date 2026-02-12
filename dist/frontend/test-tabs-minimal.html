@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Switching Test - Minimal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-desktop"></i>
+                    Tab Switching Test
+                </h1>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+            </button>
+            <button class="nav-btn" data-tab="errors">
+                <i class="fas fa-exclamation-triangle"></i>
+                Errors
+            </button>
+            <button class="nav-btn" data-tab="ai-chat">
+                <i class="fas fa-robot"></i>
+                AI Chat
+            </button>
+            <button class="nav-btn" data-tab="api-key">
+                <i class="fas fa-key"></i>
+                API Key
+            </button>
+            <button class="nav-btn" data-tab="pc-management">
+                <i class="fas fa-cog"></i>
+                PC Management
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="tab-header">
+                    <h2>PC Dashboard</h2>
+                </div>
+                <p>✅ Dashboard Tab - Working!</p>
+                <p>Tab switching functionality is working correctly.</p>
+            </div>
+
+            <!-- Errors Tab -->
+            <div id="errors-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Error Log</h2>
+                </div>
+                <p>✅ Errors Tab - Working!</p>
+                <p>You can successfully switch to the Errors tab.</p>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div id="ai-chat-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>AI Assistant</h2>
+                </div>
+                <p>✅ AI Chat Tab - Working!</p>
+                <p>The AI Chat tab is accessible and functional.</p>
+            </div>
+
+            <!-- API Key Tab -->
+            <div id="api-key-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>API Key Settings</h2>
+                </div>
+                <p>✅ API Key Tab - Working!</p>
+                <p>API Key settings tab loads correctly.</p>
+            </div>
+
+            <!-- PC Management Tab -->
+            <div id="pc-management-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>PC Management</h2>
+                </div>
+                <p>✅ PC Management Tab - Working!</p>
+                <p>PC Management tab is accessible.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Minimal tab switching test
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing tab switching');
+            
+            // Tab navigation
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    console.log('Tab clicked:', e.target.closest('.nav-btn').dataset.tab);
+                    const tabName = e.target.closest('.nav-btn').dataset.tab;
+                    
+                    // Update navigation
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    e.target.closest('.nav-btn').classList.add('active');
+                    
+                    // Update content
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById(`${tabName}-tab`).classList.add('active');
+                    
+                    console.log(`Successfully switched to ${tabName} tab`);
+                });
+            });
+            
+            console.log('Tab switching initialized successfully');
+        });
+    </script>
+</body>
+</html>

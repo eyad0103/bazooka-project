@@ -1,0 +1,16 @@
+{
+  "pcs": [
+    {
+      "id": "test-pc-002",
+      "name": "Test PC 2",
+      "ip": "192.168.1.101",
+      "os": "Windows 11",
+      "specs": {},
+      "displayName": "Test PC 2",
+      "status": "online",
+      "lastSeen": "2026-02-10T14:12:53.255Z",
+      "registeredAt": "2026-02-10T14:12:49.434Z",
+      "updatedAt": "2026-02-10T14:12:53.255Z"
+    }
+  ]
+}
