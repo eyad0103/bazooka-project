@@ -28,7 +28,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // Serve static frontend files
-app.use(express.static(path.resolve(__dirname, '../frontend')));
+const frontendPath = process.env.VERCEL ? '../public' : '../frontend';
+app.use(express.static(path.resolve(__dirname, frontendPath)));
 
 // API routes (must come before catch-all)
 app.use('/api', healthRoutes);
@@ -39,7 +40,8 @@ app.use('/api/settings', settingsRoutes);
 
 // Catch-all for SPA (must be last)
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../frontend/index.html'));
+  const indexPath = process.env.VERCEL ? '../public/index.html' : '../frontend/index.html';
+  res.sendFile(path.resolve(__dirname, indexPath));
 });
 
 // Error handling (must be last)
