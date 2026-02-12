@@ -6,7 +6,7 @@
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "cd backend && npm run dev",
-    "build": "rm -rf dist && mkdir -p dist && cp -r frontend/* dist/ && cp -r backend dist/",
+    "build": "echo 'No build step required'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
