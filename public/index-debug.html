@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bazooka PC Monitoring System - Debug</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-desktop"></i>
+                    Bazooka PC Monitoring - Debug
+                </h1>
+                <div class="header-status">
+                    <span id="connection-status" class="status-indicator offline">
+                        <i class="fas fa-circle"></i>
+                        <span>Offline</span>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+            </button>
+            <button class="nav-btn" data-tab="errors">
+                <i class="fas fa-exclamation-triangle"></i>
+                Errors
+            </button>
+            <button class="nav-btn" data-tab="ai-chat">
+                <i class="fas fa-robot"></i>
+                AI Chat
+            </button>
+            <button class="nav-btn" data-tab="api-key">
+                <i class="fas fa-key"></i>
+                API Key
+            </button>
+            <button class="nav-btn" data-tab="pc-management">
+                <i class="fas fa-cog"></i>
+                PC Management
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="tab-header">
+                    <h2>PC Dashboard</h2>
+                    <button id="refresh-dashboard" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                </div>
+                <p>Dashboard content - Debug Mode</p>
+            </div>
+
+            <!-- Errors Tab -->
+            <div id="errors-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>Error Log</h2>
+                </div>
+                <p>Errors content - Debug Mode</p>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div id="ai-chat-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>AI Assistant</h2>
+                </div>
+                <p>AI Chat content - Debug Mode</p>
+            </div>
+
+            <!-- API Key Tab -->
+            <div id="api-key-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>API Key Settings</h2>
+                </div>
+                <p>API Key content - Debug Mode</p>
+            </div>
+
+            <!-- PC Management Tab -->
+            <div id="pc-management-tab" class="tab-content">
+                <div class="tab-header">
+                    <h2>PC Management</h2>
+                </div>
+                <p>PC Management content - Debug Mode</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Debug Console -->
+    <div style="position: fixed; bottom: 10px; right: 10px; background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; max-width: 300px; max-height: 200px; overflow-y: auto; border: 1px solid #0f0;">
+        <div id="debug-console">Debug Console<br></div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Redirect console.log to debug console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const debugConsole = document.getElementById('debug-console');
+        
+        function addToDebugConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : '#0f0';
+            debugConsole.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span><br>`;
+            debugConsole.scrollTop = debugConsole.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToDebugConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToDebugConsole(args.join(' '), 'error');
+        };
+    </script>
+    <script src="js/main-debug.js"></script>
+</body>
+</html>

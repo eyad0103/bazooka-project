@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Switching Test</title>
+    <style>
+        .nav-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .nav-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tab Switching Test</h1>
+    
+    <nav>
+        <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="errors">Errors</button>
+        <button class="nav-btn" data-tab="ai-chat">AI Chat</button>
+    </nav>
+
+    <div id="dashboard-tab" class="tab-content active">
+        <h2>Dashboard Content</h2>
+        <p>This is the dashboard tab content.</p>
+    </div>
+
+    <div id="errors-tab" class="tab-content">
+        <h2>Errors Content</h2>
+        <p>This is the errors tab content.</p>
+    </div>
+
+    <div id="ai-chat-tab" class="tab-content">
+        <h2>AI Chat Content</h2>
+        <p>This is the AI chat tab content.</p>
+    </div>
+
+    <script>
+        // Simple tab switching test
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                
+                // Update navigation
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                console.log(`Switched to tab: ${tabName}`);
+            });
+        });
+    </script>
+</body>
+</html>
